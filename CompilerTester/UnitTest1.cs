@@ -1,13 +1,13 @@
-using System;
-using Xunit;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CompilerTester
 {
     public class UnitTest1
     {
-        [Fact]
-        public void Test1()
+        [TestClass]
+        public class ScannerTests
         {
+            
         }
     }
 }

@@ -14,7 +14,11 @@
     ],
     "frameworks": {
       "netcoreapp2.2": {
-        "projectReferences": {}
+        "projectReferences": {
+          "C:\\Users\\Ian\\RiderProjects\\Compiler\\Compiler\\Compiler.csproj": {
+            "projectPath": "C:\\Users\\Ian\\RiderProjects\\Compiler\\Compiler\\Compiler.csproj"
+          }
+        }
       }
     },
     "warningProperties": {

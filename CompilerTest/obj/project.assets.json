@@ -1617,6 +1617,16 @@
         "runtime": {
           "lib/netstandard1.3/System.Xml.XPath.XmlDocument.dll": {}
         }
+      },
+      "Compiler/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v2.2",
+        "compile": {
+          "bin/placeholder/Compiler.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Compiler.dll": {}
+        }
       }
     }
   },
@@ -5808,10 +5818,16 @@
         "system.xml.xpath.xmldocument.4.0.1.nupkg.sha512",
         "system.xml.xpath.xmldocument.nuspec"
       ]
+    },
+    "Compiler/1.0.0": {
+      "type": "project",
+      "path": "../Compiler/Compiler.csproj",
+      "msbuildProject": "../Compiler/Compiler.csproj"
     }
   },
   "projectFileDependencyGroups": {
     ".NETCoreApp,Version=v2.2": [
+      "Compiler >= 1.0.0",
       "MSTest.TestAdapter >= 1.3.2",
       "MSTest.TestFramework >= 1.3.2",
       "Microsoft.NET.Test.Sdk >= 15.9.0",
@@ -5847,7 +5863,11 @@
       },
       "frameworks": {
         "netcoreapp2.2": {
-          "projectReferences": {}
+          "projectReferences": {
+            "C:\\Users\\Ian\\RiderProjects\\Compiler\\Compiler\\Compiler.csproj": {
+              "projectPath": "C:\\Users\\Ian\\RiderProjects\\Compiler\\Compiler\\Compiler.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
