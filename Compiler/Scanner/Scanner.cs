@@ -67,8 +67,13 @@ namespace Compiler.Scanner
             if (char.IsLetter(CurrChar)) return ProcessWord();
             if (char.IsWhiteSpace(CurrChar))
             {
-                MoveForward();
-                return GetNextToken();
+                for (;;)
+                {
+                    MoveForward();
+                    NextChar();
+                    if (char.IsLetter(CurrChar)) break;
+                }
+                return EvalChar();
             }
             return new Token.Token(TokenType.Invalid, CurrChar.ToString(), Line, Col);
         }
@@ -84,7 +89,6 @@ namespace Compiler.Scanner
                 else if (char.IsWhiteSpace(CurrChar)) break;
                 else
                 {
-                    Col--;
                     break;
                 }
             }
