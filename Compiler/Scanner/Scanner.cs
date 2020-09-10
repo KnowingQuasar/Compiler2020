@@ -34,13 +34,25 @@ namespace Compiler.Scanner
 
         public Token.Token GetNextToken()
         {
-            return NextChar() ? EvalChar() : new Token.Token(TokenType.Error, "", -1, -1);
+            return NextChar() ? EvalChar() : new Token.Token(TokenType.Eof, "", -1, -1);
         }
 
         private void MoveForward()
         {
             CurrChar = (char) StreamReader.Read();
-            Col++;
+            switch (CurrChar)
+            {
+                case '\n':
+                    Line++;
+                    Col = 0;
+                    break;
+                case '\t':
+                    Col += 8;
+                    break;
+                default:
+                    Col++;
+                    break;
+            }
         }
 
         private bool NextChar()
@@ -53,44 +65,105 @@ namespace Compiler.Scanner
             {
                 CurrChar = char.ToUpper(CurrChar);
             }
-            else if (CurrChar == '\n')
-            {
-                Line++;
-                Col = 0;
-            }
 
             return true;
         }
 
         private Token.Token EvalChar()
         {
-            if (char.IsLetter(CurrChar)) return ProcessWord();
-            if (char.IsWhiteSpace(CurrChar))
+            while (true)
             {
-                for (;;)
+                if (char.IsLetter(CurrChar))
                 {
-                    MoveForward();
-                    NextChar();
-                    if (char.IsLetter(CurrChar)) break;
+                    return ProcessWord();
                 }
-                return EvalChar();
+
+                if (char.IsWhiteSpace(CurrChar))
+                {
+                    for (;;)
+                    {
+                        MoveForward();
+                        if (!NextChar()) return new Token.Token(TokenType.Eof, "", -1, -1);
+                        if (!char.IsWhiteSpace(CurrChar)) break;
+                    }
+
+                    continue;
+                }
+
+                if (char.IsNumber(CurrChar))
+                {
+                    return ProcessNum();
+                }
+
+                switch (CurrChar)
+                {
+                    case ';':
+                        return ReturnTokenAndAdvance(TokenType.Semicolon);
+                    case '/':
+                        return ProcessSlash();
+                    case '=':
+                        return ReturnTokenAndAdvance(TokenType.Eq);
+                    case '+':
+                        return ReturnTokenAndAdvance(TokenType.Plus);
+                    case '-':
+                        return ReturnTokenAndAdvance(TokenType.Minus);
+                    case '*':
+                        return ReturnTokenAndAdvance(TokenType.Asterisk);
+                    case '^':
+                        return ReturnTokenAndAdvance(TokenType.Pow);
+                    case '"':
+                        return ProcessStr();
+                    case '.':
+                        return ReturnTokenAndAdvance(TokenType.Dot);
+                    default:
+                        return ReturnTokenAndAdvance(TokenType.Invalid);
+                }
             }
-            return new Token.Token(TokenType.Invalid, CurrChar.ToString(), Line, Col);
+        }
+
+        private Token.Token ReturnTokenAndAdvance(TokenType type)
+        {
+            MoveForward();
+            return new Token.Token(type, CurrChar.ToString(), Line, Col);
+        }
+
+        private Token.Token ProcessStr()
+        {
+            var word = CurrChar.ToString();
+            MoveForward();
+            NextChar();
+            for (;;)
+            {
+                MoveForward();
+
+                if (CurrChar == '"')
+                {
+                    word += CurrChar;
+                    return new Token.Token(TokenType.StrConst, word, Line, Col);
+                }
+
+                if (StreamReader.EndOfStream)
+                {
+                    return new Token.Token(TokenType.Invalid, word, Line, Col);
+                }
+
+                word += CurrChar;
+            }
         }
 
         private Token.Token ProcessWord()
         {
-            var word = CurrChar.ToString();
+            var word = "";
             for (;;)
             {
-                MoveForward();
-                NextChar();
                 if (char.IsLetter(CurrChar) || char.IsNumber(CurrChar) || CurrChar == '_') word += CurrChar.ToString();
                 else if (char.IsWhiteSpace(CurrChar)) break;
                 else
                 {
                     break;
                 }
+                MoveForward();
+                NextChar();
             }
 
             switch (word)
@@ -128,8 +201,62 @@ namespace Compiler.Scanner
                 case "DEFAULT":
                     return new Token.Token(TokenType.Default, word, Line, Col);
                 default:
-                    return new Token.Token(TokenType.Ident, word, Line, Col);
+                    return new Token.Token(TokenType.VarName, word, Line, Col);
             }
+        }
+
+        private Token.Token ProcessNum()
+        {
+            var word = "";
+            for (;;)
+            {
+                NextChar();
+                if (!char.IsNumber(CurrChar))
+                {
+                    break;
+                }
+                word += CurrChar;
+                MoveForward();
+            }
+
+            if (word.Length > 1 && word[0] == '0')
+            {
+                return new Token.Token(TokenType.Invalid, word, Line, Col);
+            }
+            
+            return new Token.Token(TokenType.IntConst, word, Line, Col);
+        }
+
+        private Token.Token ProcessSlash()
+        {
+            MoveForward();
+            NextChar();
+            if (CurrChar == '/')
+            {
+                for (;;)
+                {
+                    MoveForward();
+                    if (StreamReader.EndOfStream || CurrChar == '\n')
+                    {
+                        break;
+                    }
+                }
+
+                return EvalChar();
+            }
+
+            if (CurrChar != '*') return new Token.Token(TokenType.Slash, CurrChar.ToString(), Line, Col);
+            for (;;)
+            {
+                MoveForward();
+                if (CurrChar != '*') continue;
+                MoveForward();
+                if (CurrChar != '/') continue;
+                MoveForward();
+                break;
+            }
+
+            return EvalChar();
         }
     }
 }
