@@ -20,7 +20,7 @@ namespace CompilerTest
         public void TestParseBasicFile()
         {
             var asmName = _parser.Parse(TestFile);
-            Assert.IsTrue(_parser.Parse(TestFile));
+            Assert.IsNotNull(asmName);
             
 //            using (var p = new Process())
 //            {

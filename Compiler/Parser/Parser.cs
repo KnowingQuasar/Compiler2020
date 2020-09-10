@@ -31,19 +31,19 @@ namespace Compiler.Parser
             _asmFileName = null;
         }
 
-        public bool Parse(string fileName)
+        public string Parse(string fileName)
         {
             if (!_scanner.OpenFile(fileName))
             {
                 Console.Error.WriteLine("Could not open file: " + fileName);
-                return false;
+                return null;
             }
 
             _curr = _scanner.GetNextToken();
 
-            if (!P_Program()) return false;
+            if (!P_Program()) return null;
             LogError("File compiled successfully!");
-            return _asmFile.;
+            return _asmFileName;
         }
 
         private void LogError(string message)
