@@ -73,7 +73,18 @@ namespace Compiler.Parser
         private bool P_Statement()
         {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            return ((P_NumAssignStmt() || P_NumDeclStmt() || P_WriteStmt()) && P_Statement()) || true;
+            return ((P_WriteStmt() || P_AssignStmt() || P_NumDeclStmt() || P_ArrayStmt()) && P_Statement()) || true;
+        }
+
+        private bool P_AssignStmt()
+        {
+            var assignee = P_VarName();
+            if (assignee != null)
+            {
+                return P_NumAssignStmt(assignee) || P_ArrayAssignStmt(assignee);
+            }
+
+            return false;
         }
         
         private Token.Token P_VarName()

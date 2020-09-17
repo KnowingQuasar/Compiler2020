@@ -17,16 +17,13 @@ namespace Compiler.Parser
         /// [variable name] = [exp] ;
         /// </summary>
         /// <returns></returns>
-        private bool P_NumAssignStmt()
+        private bool P_NumAssignStmt(Token.Token assignee)
         {
-            var assignee = P_VarName();
-            if(assignee != null) {
-                if (P_Eq())
+            if (P_Eq())
+            {
+                if (P_Exp(assignee, false))
                 {
-                    if (P_Exp(assignee, false))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 

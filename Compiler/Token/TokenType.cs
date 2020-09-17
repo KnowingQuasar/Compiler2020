@@ -27,6 +27,7 @@ namespace Compiler.Token
         Pow,
         StrConst,
         Eof,
+        Array,
         Neq,
         Greater,
         Less,

@@ -17,7 +17,9 @@ namespace Compiler.Parser
         private int _dataCtr;
         private string _text;
         private int _expCtr;
+        private int _arrCtr;
         private string _asmFileName;
+        private List<PArray> _arrs;
         
         public Parser()
         {
@@ -25,9 +27,11 @@ namespace Compiler.Parser
             _scanner = new Scanner.Scanner();
             _bss = new HashSet<BssData>();
             _data = new HashSet<PData>();
+            _arrs = new List<PArray>();
             _bssCtr = -1;
             _dataCtr = -1;
             _expCtr = -1;
+            _arrCtr = -1;
             _asmFileName = null;
         }
 
@@ -119,8 +123,8 @@ namespace Compiler.Parser
                 if (_curr.Type == TokenType.VarName)
                 {
                     _asmFileName = $"{_curr.Lex.ToLower()}.asm";
-                    _asmFile = new StreamWriter(_asmFileName);
-                    _errFile = new StreamWriter($"{_curr.Lex.ToLower()}.err");
+                    _asmFile = new StreamWriter("C:\\Compiler\\" + _asmFileName);
+                    _errFile = new StreamWriter("C:\\Compiler\\" + $"{_curr.Lex.ToLower()}.err");
 
                     _asmFile.WriteLine("global Start");
                     _asmFile.WriteLine("extern _printf");

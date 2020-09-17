@@ -10,10 +10,10 @@
       "c:\\program files\\dotnet\\sdk\\NuGetFallbackFolder"
     ],
     "originalTargetFrameworks": [
-      "netcoreapp2.2"
+      "netcoreapp3.1"
     ],
     "frameworks": {
-      "netcoreapp2.2": {
+      "netcoreapp3.1": {
         "projectReferences": {
           "C:\\Users\\Ian\\RiderProjects\\Compiler\\Compiler\\Compiler.csproj": {
             "projectPath": "C:\\Users\\Ian\\RiderProjects\\Compiler\\Compiler\\Compiler.csproj"
@@ -28,7 +28,7 @@
     }
   },
   "frameworks": {
-    "netcoreapp2.2": {
+    "netcoreapp3.1": {
       "dependencies": {
         "MSTest.TestAdapter": {
           "target": "Package",
@@ -41,16 +41,15 @@
         "Microsoft.NET.Test.Sdk": {
           "target": "Package",
           "version": "[15.9.0, )"
-        },
-        "Microsoft.NETCore.App": {
-          "suppressParent": "All",
-          "target": "Package",
-          "version": "[2.2.0, )",
-          "autoReferenced": true
         }
       },
       "imports": [
-        "net461"
+        "net461",
+        "net462",
+        "net47",
+        "net471",
+        "net472",
+        "net48"
       ],
       "assetTargetFallback": true,
       "warn": true

@@ -115,6 +115,12 @@ namespace Compiler.Scanner
                         return ProcessStr();
                     case '.':
                         return ReturnTokenAndAdvance(TokenType.Dot);
+                    case '[':
+                        return ReturnTokenAndAdvance(TokenType.Lbrack);
+                    case ']':
+                        return ReturnTokenAndAdvance(TokenType.Rbrack);
+                    case ',':
+                        return ReturnTokenAndAdvance(TokenType.Comma);
                     default:
                         return ReturnTokenAndAdvance(TokenType.Invalid);
                 }
@@ -200,6 +206,8 @@ namespace Compiler.Scanner
                     return new Token.Token(TokenType.Case, word, Line, Col);
                 case "DEFAULT":
                     return new Token.Token(TokenType.Default, word, Line, Col);
+                case "ARRAY":
+                    return new Token.Token(TokenType.Array, word, Line, Col);
                 default:
                     return new Token.Token(TokenType.VarName, word, Line, Col);
             }
