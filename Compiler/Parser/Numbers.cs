@@ -7,7 +7,21 @@ namespace Compiler.Parser
     {
         private Token.Token P_IntConst()
         {
-            if (_curr.Type != TokenType.IntConst) return null;
+            if (_curr.Type != TokenType.IntConst)
+            {
+                if (_curr.Type == TokenType.Minus)
+                {
+                    _curr = _scanner.GetNextToken();
+                    if(_curr.Type == TokenType.IntConst)
+                    {
+                        var num = _curr;
+                        _curr = _scanner.GetNextToken();
+                        return new Token.Token(TokenType.IntConst, $"-{num.Lex}", num.Line, num.Col);
+                    }
+                }
+
+                return null;
+            }
             var intCont = _curr;
             _curr = _scanner.GetNextToken();
             return intCont;
@@ -48,43 +62,6 @@ namespace Compiler.Parser
             }
 
             return P_Eq() && P_Exp(declaredVar, true);
-
-//            if (P_Eq())
-//            {
-//                _lHand = _curr.Lex;
-//                _lHandType = _curr.Type;
-//                if (P_IntConst() != null)
-//                {
-//                    if (P_Semicolon())
-//                    {
-//                        _dataCtr++;
-//                        _data.Add(new PData(GenerateDataName(_lastVarName), _lastVarName, "dd", _lHand));
-//                        return true;
-//                    }
-//                    
-//                    return P_Ae() && P_Semicolon();
-//                }
-//
-//                _lHand = _lastVarName;
-//                _lHandType = TokenType.VarName;
-//                if (P_VarName() != null)
-//                {
-//                    if (P_Semicolon())
-//                    {
-//                        _bssCtr++;
-//                        _bss.Add(new BssData(GenerateBssName(_lHand), _lHand, "resd", "1"));
-//                        _text += $"mov edi, DWORD[{FindAsmName(_lastVarName)}]\n";
-//                        _text += $"mov DWORD[{FindAsmName(_lHand)}], edi\n";
-//                        return true;
-//                    }
-//
-//                    return P_Ae() && P_Semicolon();
-//                }
-//
-//                return P_Exp() && P_Semicolon();
-//            }
-//
-//            return false;
         }
 
         private bool P_Exp(Token.Token assignee, bool decl = false)
