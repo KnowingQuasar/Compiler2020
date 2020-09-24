@@ -121,6 +121,10 @@ namespace Compiler.Scanner
                         return ReturnTokenAndAdvance(TokenType.Rbrack);
                     case ',':
                         return ReturnTokenAndAdvance(TokenType.Comma);
+                    case '(':
+                        return ReturnTokenAndAdvance(TokenType.Lparen);
+                    case ')':
+                        return ReturnTokenAndAdvance(TokenType.Rparen);
                     default:
                         return ReturnTokenAndAdvance(TokenType.Invalid);
                 }

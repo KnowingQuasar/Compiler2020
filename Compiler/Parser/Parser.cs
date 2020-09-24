@@ -20,6 +20,7 @@ namespace Compiler.Parser
         private int _arrCtr;
         private string _asmFileName;
         private List<PArray> _arrs;
+        private int _tmpCtr;
         
         public Parser()
         {
@@ -32,6 +33,7 @@ namespace Compiler.Parser
             _dataCtr = -1;
             _expCtr = -1;
             _arrCtr = -1;
+            _tmpCtr = -1;
             _asmFileName = null;
         }
 
@@ -115,7 +117,7 @@ namespace Compiler.Parser
         /// </summary>
         /// <returns></returns>
         private bool P_Program()
-        {
+        {  
             if (_curr.Type == TokenType.Program)
             {
                 _curr = _scanner.GetNextToken();
