@@ -1,17 +1,16 @@
 using System;
-using System.Collections.Generic;
 
 namespace Compiler.Token
 {
     public class Token
     {
-        public TokenType Type { get; set; }
+        public TokenType Type { get; }
 
-        public string Lex { get; set; }
+        public string Lex { get; }
 
-        public int Line { get; set; }
+        public int Line { get; }
 
-        protected bool Equals(Token other)
+        private bool Equals(Token other)
         {
             return Type == other.Type && string.Equals(Lex, other.Lex) && Line == other.Line && Col == other.Col;
         }
@@ -20,8 +19,7 @@ namespace Compiler.Token
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Token) obj);
+            return obj.GetType() == this.GetType() && Equals((Token) obj);
         }
 
         public override int GetHashCode()
@@ -36,7 +34,7 @@ namespace Compiler.Token
             }
         }
 
-        public int Col { get; set; }
+        public int Col { get; }
 
         public Token(TokenType type, string lex, int line, int col)
         {

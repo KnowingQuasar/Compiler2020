@@ -28,6 +28,8 @@ namespace Compiler.Token
         StrConst,
         Eof,
         Array,
+        Lbrace,
+        Rbrace,
         Neq,
         Greater,
         Less,

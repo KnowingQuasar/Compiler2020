@@ -95,39 +95,26 @@ namespace Compiler.Scanner
                     return ProcessNum();
                 }
 
-                switch (CurrChar)
+                return CurrChar switch
                 {
-                    case ';':
-                        return ReturnTokenAndAdvance(TokenType.Semicolon);
-                    case '/':
-                        return ProcessSlash();
-                    case '=':
-                        return ReturnTokenAndAdvance(TokenType.Eq);
-                    case '+':
-                        return ReturnTokenAndAdvance(TokenType.Plus);
-                    case '-':
-                        return ReturnTokenAndAdvance(TokenType.Minus);
-                    case '*':
-                        return ReturnTokenAndAdvance(TokenType.Asterisk);
-                    case '^':
-                        return ReturnTokenAndAdvance(TokenType.Pow);
-                    case '"':
-                        return ProcessStr();
-                    case '.':
-                        return ReturnTokenAndAdvance(TokenType.Dot);
-                    case '[':
-                        return ReturnTokenAndAdvance(TokenType.Lbrack);
-                    case ']':
-                        return ReturnTokenAndAdvance(TokenType.Rbrack);
-                    case ',':
-                        return ReturnTokenAndAdvance(TokenType.Comma);
-                    case '(':
-                        return ReturnTokenAndAdvance(TokenType.Lparen);
-                    case ')':
-                        return ReturnTokenAndAdvance(TokenType.Rparen);
-                    default:
-                        return ReturnTokenAndAdvance(TokenType.Invalid);
-                }
+                    ';' => ReturnTokenAndAdvance(TokenType.Semicolon),
+                    '/' => ProcessSlash(),
+                    '=' => ReturnTokenAndAdvance(TokenType.Eq),
+                    '+' => ReturnTokenAndAdvance(TokenType.Plus),
+                    '-' => ReturnTokenAndAdvance(TokenType.Minus),
+                    '*' => ReturnTokenAndAdvance(TokenType.Asterisk),
+                    '^' => ReturnTokenAndAdvance(TokenType.Pow),
+                    '"' => ProcessStr(),
+                    '.' => ReturnTokenAndAdvance(TokenType.Dot),
+                    '[' => ReturnTokenAndAdvance(TokenType.Lbrack),
+                    ']' => ReturnTokenAndAdvance(TokenType.Rbrack),
+                    ',' => ReturnTokenAndAdvance(TokenType.Comma),
+                    '(' => ReturnTokenAndAdvance(TokenType.Lparen),
+                    ')' => ReturnTokenAndAdvance(TokenType.Rparen),
+                    '{' => ReturnTokenAndAdvance(TokenType.Lbrace),
+                    '}' => ReturnTokenAndAdvance(TokenType.Rbrace),
+                    _ => ReturnTokenAndAdvance(TokenType.Invalid)
+                };
             }
         }
 
@@ -176,45 +163,29 @@ namespace Compiler.Scanner
                 NextChar();
             }
 
-            switch (word)
+            return word switch
             {
-                case "PROGRAM":
-                    return new Token.Token(TokenType.Program, word, Line, Col);
-                case "Return":
-                    return new Token.Token(TokenType.Return, word, Line, Col);
-                case "WRITE":
-                    return new Token.Token(TokenType.Write, word, Line, Col);
-                case "FOR":
-                    return new Token.Token(TokenType.For, word, Line, Col);
-                case "TO":
-                    return new Token.Token(TokenType.To, word, Line, Col);
-                case "STEP":
-                    return new Token.Token(TokenType.Step, word, Line, Col);
-                case "BEGIN":
-                    return new Token.Token(TokenType.Begin, word, Line, Col);
-                case "END":
-                    return new Token.Token(TokenType.End, word, Line, Col);
-                case "NUM":
-                    return new Token.Token(TokenType.Num, word, Line, Col);
-                case "PROCEDURE":
-                    return new Token.Token(TokenType.Proc, word, Line, Col);
-                case "IF":
-                    return new Token.Token(TokenType.If, word, Line, Col);
-                case "THEN":
-                    return new Token.Token(TokenType.Then, word, Line, Col);
-                case "ELSE":
-                    return new Token.Token(TokenType.Else, word, Line, Col);
-                case "SWITCH":
-                    return new Token.Token(TokenType.Switch, word, Line, Col);
-                case "CASE":
-                    return new Token.Token(TokenType.Case, word, Line, Col);
-                case "DEFAULT":
-                    return new Token.Token(TokenType.Default, word, Line, Col);
-                case "ARRAY":
-                    return new Token.Token(TokenType.Array, word, Line, Col);
-                default:
-                    return new Token.Token(TokenType.VarName, word, Line, Col);
-            }
+                "PROGRAM" => new Token.Token(TokenType.Program, word, Line, Col),
+                "Return" => new Token.Token(TokenType.Return, word, Line, Col),
+                "WRITE" => new Token.Token(TokenType.Write, word, Line, Col),
+                "READ" => new Token.Token(TokenType.Read, word, Line, Col),
+                "FOR" => new Token.Token(TokenType.For, word, Line, Col),
+                "TO" => new Token.Token(TokenType.To, word, Line, Col),
+                "DO" => new Token.Token(TokenType.Do, word, Line, Col),
+                "STEP" => new Token.Token(TokenType.Step, word, Line, Col),
+                "BEGIN" => new Token.Token(TokenType.Begin, word, Line, Col),
+                "END" => new Token.Token(TokenType.End, word, Line, Col),
+                "NUM" => new Token.Token(TokenType.Num, word, Line, Col),
+                "PROCEDURE" => new Token.Token(TokenType.Proc, word, Line, Col),
+                "IF" => new Token.Token(TokenType.If, word, Line, Col),
+                "THEN" => new Token.Token(TokenType.Then, word, Line, Col),
+                "ELSE" => new Token.Token(TokenType.Else, word, Line, Col),
+                "SWITCH" => new Token.Token(TokenType.Switch, word, Line, Col),
+                "CASE" => new Token.Token(TokenType.Case, word, Line, Col),
+                "DEFAULT" => new Token.Token(TokenType.Default, word, Line, Col),
+                "ARRAY" => new Token.Token(TokenType.Array, word, Line, Col),
+                _ => new Token.Token(TokenType.VarName, word, Line, Col)
+            };
         }
 
         private Token.Token ProcessNum()

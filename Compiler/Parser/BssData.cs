@@ -1,13 +1,11 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Compiler.Parser
 {
     public class BssData
     {
-        public string AsmName;
-        public string ActualName;
-        public string DataType;
-        public string Size;
+        public readonly string AsmName;
+        public readonly string ActualName;
+        public readonly string DataType;
+        public readonly string Size;
 
         public BssData(string asmName, string actualName, string dataType, string size)
         {

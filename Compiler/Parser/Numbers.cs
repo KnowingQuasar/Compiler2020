@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Compiler.Token;
 
@@ -6,22 +5,48 @@ namespace Compiler.Parser
 {
     public partial class Parser
     {
+        private bool PerformExpression(Token.Token assignee)
+        {
+            var postfixStack = new Stack<string>();
+            var exp = new Queue<string>();
+            if (!P_Exp(postfixStack, exp)) return false;
+            for (;;)
+            {
+                if (!postfixStack.TryPop(out var val)) break;
+                exp.Enqueue(val);
+            }
+
+            if (exp.Count == 1)
+            {
+                var val = exp.Dequeue();
+                if (int.TryParse(val, out var result))
+                {
+                    _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], {result.ToString()}\n";
+                    return true;
+                }
+
+                _text += $"mov esi, DWORD[{FindAsmName(val)}]\n";
+                _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], esi\n";
+                return true;
+            }
+            var reg = ExecutePostfix(exp);
+            if (reg == null) return false;
+            _text += $"mov esi, DWORD[{FindAsmName(reg)}]\n";
+            _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], esi\n";
+            return true;
+        }
+        
         private Token.Token P_IntConst()
         {
             if (_curr.Type != TokenType.IntConst)
             {
-                if (_curr.Type == TokenType.Minus)
-                {
-                    _curr = _scanner.GetNextToken();
-                    if (_curr.Type == TokenType.IntConst)
-                    {
-                        var num = _curr;
-                        _curr = _scanner.GetNextToken();
-                        return new Token.Token(TokenType.IntConst, $"-{num.Lex}", num.Line, num.Col);
-                    }
-                }
+                if (_curr.Type != TokenType.Minus) return null;
+                _curr = _scanner.GetNextToken();
+                if (_curr.Type != TokenType.IntConst) return null;
+                var num = _curr;
+                _curr = _scanner.GetNextToken();
+                return new Token.Token(TokenType.IntConst, $"-{num.Lex}", num.Line, num.Col);
 
-                return null;
             }
 
             var intCont = _curr;
@@ -35,29 +60,8 @@ namespace Compiler.Parser
         /// <returns></returns>
         private bool P_NumAssignStmt(Token.Token assignee)
         {
-            if (P_Eq())
-            {
-                var postfixStack = new Stack<string>();
-                var exp = new Queue<string>();
-                if (P_Exp(postfixStack, exp))
-                {
-                    for (;;)
-                    {
-                        if (!postfixStack.TryPop(out var val)) break;
-                        exp.Enqueue(val);
-                    }
-
-                    var reg = ExecutePostfix(exp);
-                    if (reg != null && P_Semicolon())
-                    {
-                        _text += $"mov esi, DWORD[{FindAsmName(reg)}]\n";
-                        _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], esi\n";
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            if (!P_Eq()) return false;
+            return PerformExpression(assignee) && P_Semicolon();
         }
 
         private bool P_NumDeclStmt()
@@ -79,8 +83,8 @@ namespace Compiler.Parser
         {
             if (P_Semicolon())
             {
-                // _bssCtr++;
-                // _bss.Add(new BssData(GenerateBssName(declaredVar.Lex), declaredVar.Lex, "resd", "1"));
+                _bssCtr++;
+                _bss.Add(new BssData(GenerateBssName(declaredVar.Lex), declaredVar.Lex, "resd", "1"));
                 return true;
             }
 
@@ -88,35 +92,33 @@ namespace Compiler.Parser
 
             var postfixStack = new Stack<string>();
             var exp = new Queue<string>();
-            if (P_Exp(postfixStack, exp))
+            if (!P_Exp(postfixStack, exp)) return false;
+            for (;;)
             {
-                for (;;)
-                {
-                    if (!postfixStack.TryPop(out var val)) break;
-                    exp.Enqueue(val);
-                }
+                if (!postfixStack.TryPop(out var val)) break;
+                exp.Enqueue(val);
+            }
 
-                if (exp.Count == 1)
+            if (exp.Count == 1)
+            {
+                var val = exp.Dequeue();
+                if (int.TryParse(val, out var result))
                 {
-                    var val = exp.Dequeue();
-                    if (int.TryParse(val, out var result))
-                    {
-                        _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], {result.ToString()}\n";
-                        return P_Semicolon();
-                    }
-
-                    _text += $"mov esi, DWORD[{FindAsmName(val)}]\n";
-                    _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi\n";
+                    _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], {result.ToString()}\n";
                     return P_Semicolon();
                 }
 
-                var reg = ExecutePostfix(exp);
-                if (P_Semicolon())
-                {
-                    _text += $"mov esi, DWORD[{FindAsmName(reg)}]\n";
-                    _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi\n";
-                    return true;
-                }
+                _text += $"mov esi, DWORD[{FindAsmName(val)}]\n";
+                _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi\n";
+                return P_Semicolon();
+            }
+
+            var reg = ExecutePostfix(exp);
+            if (P_Semicolon())
+            {
+                _text += $"mov esi, DWORD[{FindAsmName(reg)}]\n";
+                _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi\n";
+                return true;
             }
 
             return false;
@@ -323,7 +325,6 @@ namespace Compiler.Parser
         private bool P_Plus()
         {
             if (_curr.Type != TokenType.Plus) return false;
-            var op = _curr;
             _curr = _scanner.GetNextToken();
             return true;
         }
@@ -331,7 +332,6 @@ namespace Compiler.Parser
         private bool P_Minus()
         {
             if (_curr.Type != TokenType.Minus) return false;
-            var op = _curr;
             _curr = _scanner.GetNextToken();
             return true;
         }
@@ -339,7 +339,6 @@ namespace Compiler.Parser
         private bool P_Divide()
         {
             if (_curr.Type != TokenType.Slash) return false;
-            var op = _curr;
             _curr = _scanner.GetNextToken();
             return true;
         }
@@ -347,7 +346,6 @@ namespace Compiler.Parser
         private bool P_Multiply()
         {
             if (_curr.Type != TokenType.Asterisk) return false;
-            var op = _curr;
             _curr = _scanner.GetNextToken();
             return true;
         }
@@ -355,7 +353,6 @@ namespace Compiler.Parser
         private bool P_Pow()
         {
             if (_curr.Type != TokenType.Pow) return false;
-            var op = _curr;
             _curr = _scanner.GetNextToken();
             return true;
         }

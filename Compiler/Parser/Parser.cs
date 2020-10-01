@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Compiler.Token;
 
 namespace Compiler.Parser
@@ -21,6 +22,7 @@ namespace Compiler.Parser
         private string _asmFileName;
         private List<PArray> _arrs;
         private int _tmpCtr;
+        private int _loopCtr;
         
         public Parser()
         {
@@ -34,6 +36,7 @@ namespace Compiler.Parser
             _expCtr = -1;
             _arrCtr = -1;
             _tmpCtr = -1;
+            _loopCtr = -1;
             _asmFileName = null;
         }
 
@@ -48,13 +51,14 @@ namespace Compiler.Parser
             _curr = _scanner.GetNextToken();
 
             if (!P_Program()) return null;
-            LogError("File compiled successfully!");
+           // LogError("File compiled successfully!");
             return _asmFileName;
         }
 
         private void LogError(string message)
         {
-            
+            Console.Error.WriteLine(message);
+            _errFile?.WriteLine(message);
         }
 
         private string GenerateBssName(string lex)
@@ -69,14 +73,11 @@ namespace Compiler.Parser
 
         private string BuildData()
         {
-            var text = "section .data\n";
-            foreach (var item in _data)
-            {
-                text += $"{item.AsmName} {item.DataType} {item.Value}\n";
-            }
+            var text = _data.Aggregate("section .data\n", (current, item) => current + $"{item.AsmName} {item.DataType} {item.Value}\n");
 
             text += "stringPrinter db \"%s\",0\n";
             text += "numberPrinter db \"%d\",0x0d,0x0a,0\n";
+            text += "int_format db \"%i\",0\n";
 
             return text;
         }
@@ -130,6 +131,7 @@ namespace Compiler.Parser
 
                     _asmFile.WriteLine("global Start");
                     _asmFile.WriteLine("extern _printf");
+                    _asmFile.WriteLine("extern _scanf");
                     _asmFile.WriteLine("extern _ExitProcess@4");
 
                     _text += "section .text\n";

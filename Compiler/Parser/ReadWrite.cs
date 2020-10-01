@@ -53,6 +53,20 @@ namespace Compiler.Parser
             return P_Semicolon();
         }
 
+        private bool P_ReadStmt()
+        {
+            if (_curr.Type != TokenType.Read) return false;
+            _curr = _scanner.GetNextToken();
+            var assignee = P_VarName();
+            _text += "pusha\n";
+            _text += $"push {FindAsmName(assignee.Lex)}\n";
+            _text += "push dword int_format\n";
+            _text += "call _scanf\n";
+            _text += "add esp, 0x04\n";
+            _text += "popa\n";
+            return P_Semicolon();
+        }
+
         private Token.Token P_Alpha()
         {
             var alpha = P_StrConst();

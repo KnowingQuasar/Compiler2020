@@ -2,10 +2,10 @@ namespace Compiler.Parser
 {
     public class PData
     {
-        public string AsmName;
-        public string ActualName;
-        public string DataType;
-        public string Value;
+        public readonly string AsmName;
+        public readonly string ActualName;
+        public readonly string DataType;
+        public readonly string Value;
 
         public PData(string asmName, string actualName, string dataType, string value)
         {

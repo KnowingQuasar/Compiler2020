@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Compiler.Token;
@@ -9,13 +8,13 @@ namespace Compiler.Parser
     {
         public class PArray
         {
-            public List<ArrayData> ArrayChunks;
-            public string Name;
+            private readonly List<ArrayData> _arrayChunks;
+            public readonly string Name;
 
             public class ArrayData
             {
-                public int Lbound;
-                public int Rbound;
+                public readonly int Lbound;
+                public readonly int Rbound;
 
                 public ArrayData(int lbound, int rbound)
                 {
@@ -26,38 +25,34 @@ namespace Compiler.Parser
 
             public PArray(string name, ArrayData ad)
             {
-                ArrayChunks = new List<ArrayData> {ad};
+                _arrayChunks = new List<ArrayData> {ad};
                 Name = name;
             }
 
             public int ComputeAllocSpace()
             {
-                if (ArrayChunks == null || ArrayChunks.Count == 0) return -1;
+                if (_arrayChunks == null || _arrayChunks.Count == 0) return -1;
 
-                var space = 1;
-                foreach (var arrayChunk in ArrayChunks)
-                {
-                    space *= (arrayChunk.Rbound - arrayChunk.Lbound + 1);
-                }
+                var space = _arrayChunks.Aggregate(1, (current, arrayChunk) => current * (arrayChunk.Rbound - arrayChunk.Lbound + 1));
 
                 return space * 4;
             }
 
             public int GetRef(List<int> indices)
             {
-                if (indices.Count != ArrayChunks.Count) return -1;
+                if (indices.Count != _arrayChunks.Count) return -1;
                 var mappingValues = new List<int>();
                 var relocationFactor = 0;
-                for (var i = 0; i < ArrayChunks.Count; i++)
+                for (var i = 0; i < _arrayChunks.Count; i++)
                 {
                     var mVal = 1;
-                    for (var j = i + 1; j < ArrayChunks.Count; j++)
+                    for (var j = i + 1; j < _arrayChunks.Count; j++)
                     {
-                        mVal *= (ArrayChunks[j].Rbound - ArrayChunks[j].Lbound + 1);
+                        mVal *= (_arrayChunks[j].Rbound - _arrayChunks[j].Lbound + 1);
                     }
 
                     mappingValues.Add(mVal);
-                    relocationFactor += ArrayChunks[i].Lbound * mVal;
+                    relocationFactor += _arrayChunks[i].Lbound * mVal;
                 }
 
                 return indices.Select((t, j) => mappingValues[j] * t).Sum() - relocationFactor;
@@ -65,7 +60,7 @@ namespace Compiler.Parser
 
             public void AddArrData(ArrayData ad)
             {
-                ArrayChunks.Add(ad);
+                _arrayChunks.Add(ad);
             }
         }
 

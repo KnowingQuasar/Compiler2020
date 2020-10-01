@@ -26,6 +26,7 @@
         <e p="Parser" t="Include">
           <e p="Arrays.cs" t="Include" />
           <e p="BssData.cs" t="Include" />
+          <e p="Loops.cs" t="Include" />
           <e p="Numbers.cs" t="Include" />
           <e p="Parser.cs" t="Include" />
           <e p="PData.cs" t="Include" />
@@ -33,7 +34,6 @@
           <e p="Strings.cs" t="Include" />
           <e p="Structure.cs" t="Include" />
         </e>
-        <e p="PostFixTest.cs" t="Include" />
         <e p="Scanner" t="Include">
           <e p="Scanner.cs" t="Include" />
         </e>
@@ -54,7 +54,6 @@
           </e>
         </e>
         <e p="ParserTests.cs" t="Include" />
-        <e p="PostFixTest.cs" t="Include" />
         <e p="ScannerTests.cs" t="Include" />
       </e>
       <e p="packages" t="ExcludeRecursive" />

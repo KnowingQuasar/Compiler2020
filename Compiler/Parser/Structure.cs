@@ -4,6 +4,20 @@ namespace Compiler.Parser
 {
     public partial class Parser
     {
+        private bool P_LBrace()
+        {
+            if (_curr.Type != TokenType.Lbrace) return false;
+            _curr = _scanner.GetNextToken();
+            return true;
+        }
+
+        private bool P_Rbrace()
+        {
+            if (_curr.Type != TokenType.Rbrace) return false;
+            _curr = _scanner.GetNextToken();
+            return true;
+        }
+
         /// <summary>
         /// ;
         /// </summary>
@@ -13,7 +27,6 @@ namespace Compiler.Parser
             if (_curr.Type != TokenType.Semicolon) return false;
             _curr = _scanner.GetNextToken();
             return true;
-
         }
 
         /// <summary>
@@ -25,7 +38,6 @@ namespace Compiler.Parser
             if (_curr.Type != TokenType.Eq) return false;
             _curr = _scanner.GetNextToken();
             return true;
-
         }
 
         private bool P_Begin()
@@ -73,7 +85,8 @@ namespace Compiler.Parser
         private bool P_Statement()
         {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            return ((P_WriteStmt() || P_AssignStmt() || P_NumDeclStmt() || P_ArrayStmt()) && P_Statement()) || true;
+            return ((P_WriteStmt() || P_ReadStmt() || P_AssignStmt() || P_NumDeclStmt() || P_ArrayStmt() ||
+                     P_ForStatement()) && P_Statement()) || true;
         }
 
         private bool P_AssignStmt()
@@ -86,14 +99,13 @@ namespace Compiler.Parser
 
             return false;
         }
-        
+
         private Token.Token P_VarName()
         {
             if (_curr.Type != TokenType.VarName) return null;
             var varName = _curr;
             _curr = _scanner.GetNextToken();
             return varName;
-
         }
     }
 }
