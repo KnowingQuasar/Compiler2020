@@ -23,6 +23,8 @@ namespace Compiler.Parser
         private List<PArray> _arrs;
         private int _tmpCtr;
         private int _loopCtr;
+        private int _ifCtr;
+        private int _elseCtr;
         
         public Parser()
         {
@@ -37,6 +39,8 @@ namespace Compiler.Parser
             _arrCtr = -1;
             _tmpCtr = -1;
             _loopCtr = -1;
+            _ifCtr = -1;
+            _elseCtr = -1;
             _asmFileName = null;
         }
 
@@ -84,33 +88,29 @@ namespace Compiler.Parser
 
         private string BuildBss()
         {
-            var text = "section .bss\n";
-            foreach (var item in _bss)
-            {
-                text += $"{item.AsmName} {item.DataType} {item.Size}\n";
-            }
-
-            return text;
+            return _bss.Aggregate("section .bss\n", (current, item) => current + $"{item.AsmName} {item.DataType} {item.Size}\n");
         }
 
         private string FindAsmName(string realName)
         {
-            foreach(var item in _bss)
+            foreach (var item in _bss.Where(item => string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)))
             {
-                if (string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)) return item.AsmName;
+                return item.AsmName;
             }
 
-            foreach (var item in _data)
-            {
-                if (string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)) return item.AsmName;
-            }
-
-            return null;
+            return (from item in _data where string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase) select item.AsmName).FirstOrDefault();
         }
 
         private void LogError(TokenType actualToken, TokenType expectedToken)
         {
             LogError($"Error: Unexpected {actualToken}. Expected a {expectedToken} token.");
+        }
+
+        private bool CheckToken(TokenType tokenType)
+        {
+            if (_curr.Type != tokenType) return false;
+            _curr = _scanner.GetNextToken();
+            return true;
         }
 
         /// <summary>

@@ -66,16 +66,12 @@ namespace Compiler.Parser
 
         private bool P_Array()
         {
-            if (_curr.Type != TokenType.Array) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Array);
         }
 
         private bool P_LeftBracket()
         {
-            if (_curr.Type != TokenType.Lbrack) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Lbrack);
         }
 
         private bool P_RightBracket()

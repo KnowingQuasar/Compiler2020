@@ -70,7 +70,7 @@ namespace Compiler.Parser
         private Token.Token P_Alpha()
         {
             var alpha = P_StrConst();
-            alpha = alpha ?? P_VarName();
+            alpha ??= P_VarName();
             return alpha;
         }
     }

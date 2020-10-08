@@ -4,18 +4,22 @@ namespace Compiler.Parser
 {
     public partial class Parser
     {
+        /// <summary>
+        /// {
+        /// </summary>
+        /// <returns></returns>
         private bool P_LBrace()
         {
-            if (_curr.Type != TokenType.Lbrace) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Lbrace);
         }
 
+        /// <summary>
+        /// }
+        /// </summary>
+        /// <returns></returns>
         private bool P_Rbrace()
         {
-            if (_curr.Type != TokenType.Rbrace) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Rbrace);
         }
 
         /// <summary>
@@ -24,9 +28,7 @@ namespace Compiler.Parser
         /// <returns></returns>
         private bool P_Semicolon()
         {
-            if (_curr.Type != TokenType.Semicolon) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Semicolon);
         }
 
         /// <summary>
@@ -35,40 +37,34 @@ namespace Compiler.Parser
         /// <returns></returns>
         private bool P_Eq()
         {
-            if (_curr.Type != TokenType.Eq) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Eq);
         }
 
+        /// <summary>
+        /// BEGIN
+        /// </summary>
+        /// <returns></returns>
         private bool P_Begin()
         {
-            if (_curr.Type != TokenType.Begin) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Begin);
         }
 
+        /// <summary>
+        /// END
+        /// </summary>
+        /// <returns></returns>
         private bool P_End()
         {
-            if (_curr.Type == TokenType.End)
-            {
-                _curr = _scanner.GetNextToken();
-                return true;
-            }
-
-            LogError(_curr.Type, TokenType.End);
-            return false;
+            return CheckToken(TokenType.End);
         }
 
+        /// <summary>
+        /// .
+        /// </summary>
+        /// <returns></returns>
         private bool P_Dot()
         {
-            if (_curr.Type == TokenType.Dot)
-            {
-                _curr = _scanner.GetNextToken();
-                return true;
-            }
-
-            LogError(_curr.Type, TokenType.Dot);
-            return false;
+            return CheckToken(TokenType.Dot);
         }
 
         /// <summary>
@@ -85,7 +81,7 @@ namespace Compiler.Parser
         private bool P_Statement()
         {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            return ((P_WriteStmt() || P_ReadStmt() || P_AssignStmt() || P_NumDeclStmt() || P_ArrayStmt() ||
+            return ((P_WriteStmt() || P_ReadStmt() || P_AssignStmt() || P_IfStmt() || P_NumDeclStmt() || P_ArrayStmt() ||
                      P_ForStatement()) && P_Statement()) || true;
         }
 

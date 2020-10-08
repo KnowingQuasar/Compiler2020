@@ -30,6 +30,7 @@ namespace Compiler.Token
         Array,
         Lbrace,
         Rbrace,
+        EqComp,
         Neq,
         Greater,
         Less,

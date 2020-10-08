@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Compiler.Token;
 
 namespace Compiler.Parser
@@ -7,30 +6,22 @@ namespace Compiler.Parser
     {
         private bool P_For()
         {
-            if (_curr.Type != TokenType.For) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.For);
         }
 
         private bool P_To()
         {
-            if (_curr.Type != TokenType.To) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.To);
         }
         
         private bool P_Step()
         {
-            if (_curr.Type != TokenType.Step) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Step);
         }
         
         private bool P_Do()
         {
-            if (_curr.Type != TokenType.Do) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Do);
         }
 
         public bool P_ForStatement()

@@ -324,37 +324,27 @@ namespace Compiler.Parser
 
         private bool P_Plus()
         {
-            if (_curr.Type != TokenType.Plus) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Plus);
         }
 
         private bool P_Minus()
         {
-            if (_curr.Type != TokenType.Minus) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Minus);
         }
 
         private bool P_Divide()
         {
-            if (_curr.Type != TokenType.Slash) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Slash);
         }
 
         private bool P_Multiply()
         {
-            if (_curr.Type != TokenType.Asterisk) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Asterisk);
         }
 
         private bool P_Pow()
         {
-            if (_curr.Type != TokenType.Pow) return false;
-            _curr = _scanner.GetNextToken();
-            return true;
+            return CheckToken(TokenType.Pow);
         }
     }
 }

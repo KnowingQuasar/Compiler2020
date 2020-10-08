@@ -99,7 +99,10 @@ namespace Compiler.Scanner
                 {
                     ';' => ReturnTokenAndAdvance(TokenType.Semicolon),
                     '/' => ProcessSlash(),
-                    '=' => ReturnTokenAndAdvance(TokenType.Eq),
+                    '=' => ProcessEq(),
+                    '<' => ProcessLAngle(),
+                    '>' => ProcessRAngle(),
+                    '!' => ProcessExclamation(),
                     '+' => ReturnTokenAndAdvance(TokenType.Plus),
                     '-' => ReturnTokenAndAdvance(TokenType.Minus),
                     '*' => ReturnTokenAndAdvance(TokenType.Asterisk),
@@ -116,6 +119,42 @@ namespace Compiler.Scanner
                     _ => ReturnTokenAndAdvance(TokenType.Invalid)
                 };
             }
+        }
+
+        private Token.Token ProcessExclamation()
+        {
+            MoveForward();
+            NextChar();
+            if (CurrChar != '=') return new Token.Token(TokenType.Invalid, "", -1, -1);
+            MoveForward();
+            return new Token.Token(TokenType.Neq, "!=", Line, Col);
+        }
+
+        private Token.Token ProcessLAngle()
+        {
+            MoveForward();
+            NextChar();
+            if (CurrChar != '=') return new Token.Token(TokenType.Less, "<", Line, Col);
+            MoveForward();
+            return new Token.Token(TokenType.Leq, "<=", Line, Col);
+        }
+
+        private Token.Token ProcessRAngle()
+        {
+            MoveForward();
+            NextChar();
+            if (CurrChar != '=') return new Token.Token(TokenType.Greater, ">", Line, Col);
+            MoveForward();
+            return new Token.Token(TokenType.Geq, ">=", Line, Col);
+        }
+
+        private Token.Token ProcessEq()
+        {
+            MoveForward();
+            NextChar();
+            if (CurrChar != '=') return new Token.Token(TokenType.Eq, "=", Line, Col);
+            MoveForward();
+            return new Token.Token(TokenType.EqComp, "==", Line, Col);
         }
 
         private Token.Token ReturnTokenAndAdvance(TokenType type)

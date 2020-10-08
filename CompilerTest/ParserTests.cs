@@ -219,5 +219,37 @@ namespace CompilerTest
                 p.WaitForExit();
             }
         }
+        
+        [TestMethod]
+        public void TestIf()
+        {
+            const string testFile = @"C:\Compiler\ifexample.txt";
+            var asmName = _parser.Parse(testFile);
+            Assert.IsNotNull(asmName);
+
+            using (var p = new Process())
+            {
+                p.StartInfo.FileName = @"C:\Program Files\NASM\nasm.exe";
+                p.StartInfo.Arguments = $"-f win32 C:\\Compiler\\ifexample.asm -o C:\\Compiler\\ifexample.o";
+                p.StartInfo.UseShellExecute = false;
+                p.StartInfo.RedirectStandardOutput = true;
+                p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                p.Start();
+                var output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+            }
+
+            using (var p = new Process())
+            {
+                p.StartInfo.FileName = @"C:\MinGW\bin\ld.exe";
+                p.StartInfo.Arguments = "C:\\Compiler\\ifexample.o -lmsvcrt -lkernel32 -o C:\\Compiler\\ifexample.exe";
+                p.StartInfo.UseShellExecute = false;
+                p.StartInfo.RedirectStandardOutput = true;
+                p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                p.Start();
+                var output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+            }
+        }
     }
 }
