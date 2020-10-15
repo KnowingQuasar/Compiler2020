@@ -116,6 +116,7 @@ namespace Compiler.Scanner
                     ')' => ReturnTokenAndAdvance(TokenType.Rparen),
                     '{' => ReturnTokenAndAdvance(TokenType.Lbrace),
                     '}' => ReturnTokenAndAdvance(TokenType.Rbrace),
+                    ':' => ReturnTokenAndAdvance(TokenType.Colon),
                     _ => ReturnTokenAndAdvance(TokenType.Invalid)
                 };
             }

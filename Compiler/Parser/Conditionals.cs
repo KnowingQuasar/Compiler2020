@@ -25,33 +25,34 @@ namespace Compiler.Parser
             if(P_Condition(out var lhand, out var rhand, out var op))
             {
                 _ifCtr++;
-                _text += $"mov edi, {DetermineAsmOperand(rhand.Lex)}\n";
-                _text += $"cmp {DetermineAsmOperand(lhand.Lex)}, edi\n";
-                switch (op.Type)
-                {
-                    case TokenType.EqComp:
-                        _text += $"jnz _endif_{_ifCtr}\n";
-                        break;
-                    case TokenType.Greater:
-                        _text += $"jle _endif_{_ifCtr}\n";
-                        break;
-                    case TokenType.Less:
-                        _text += $"jge _endif_{_ifCtr}\n";
-                        break;
-                    case TokenType.Neq:
-                        _text += $"jz _endif_{_ifCtr}\n";
-                        break;
-                    case TokenType.Geq:
-                        _text += $"jl _endif_{_ifCtr}\n";
-                        break;
-                    case TokenType.Leq:
-                        _text += $"jg _endif_{_ifCtr}\n";
-                        break;
-                    default:
-                        LogError("Invalid if statement syntax.");
-                        return false;
-                }
-                    
+                _text.Add($"mov edi, {DetermineAsmOperand(rhand?.Lex)}");
+                _text.Add($"cmp {DetermineAsmOperand(lhand.Lex)}, edi");
+                if (op != null)
+                    switch (op.Type)
+                    {
+                        case TokenType.EqComp:
+                            _text.Add($"jnz _endif_{_ifCtr}");
+                            break;
+                        case TokenType.Greater:
+                            _text.Add($"jle _endif_{_ifCtr}");
+                            break;
+                        case TokenType.Less:
+                            _text.Add($"jge _endif_{_ifCtr}");
+                            break;
+                        case TokenType.Neq:
+                            _text.Add($"jz _endif_{_ifCtr}");
+                            break;
+                        case TokenType.Geq:
+                            _text.Add($"jl _endif_{_ifCtr}");
+                            break;
+                        case TokenType.Leq:
+                            _text.Add($"jg _endif_{_ifCtr}");
+                            break;
+                        default:
+                            LogError("Invalid if statement syntax.");
+                            return false;
+                    }
+
                 if (P_Then())
                 {
                     if (P_LBrace())
@@ -73,7 +74,7 @@ namespace Compiler.Parser
             return false;
         }
 
-        private bool P_Condition(out Token.Token lhand, out Token.Token rhand, out Token.Token op)
+        private bool P_Condition(out Token.Token lhand, out Token.Token? rhand, out Token.Token? op)
         {
             rhand = null;
             op = null;
@@ -101,16 +102,16 @@ namespace Compiler.Parser
         {
             if (!P_Else())
             {
-                _text += $"_endif_{ifCtr}:\n";
+                _text.Add($"_endif_{ifCtr}:");
                 return;
             }
             _elseCtr++;
             var thisElseCtr = _elseCtr;
-            _text += $"jmp _endelse_{thisElseCtr}\n";
-            _text += $"_endif_{ifCtr}:\n";
+            _text.Add($"jmp _endelse_{thisElseCtr}");
+            _text.Add($"_endif_{ifCtr}:");
             if (P_LBrace() && P_Statement() && P_Rbrace())
             {
-                _text += $"_endelse_{thisElseCtr}:\n";
+                _text.Add($"_endelse_{thisElseCtr}:");
                 return;
             }
             LogError("Invalid else statement syntax.");

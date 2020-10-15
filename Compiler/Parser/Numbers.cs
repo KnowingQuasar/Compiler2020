@@ -21,37 +21,43 @@ namespace Compiler.Parser
                 var val = exp.Dequeue();
                 if (int.TryParse(val, out var result))
                 {
-                    _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], {result.ToString()}\n";
+                    _text.Add($"mov DWORD[{FindAsmName(assignee.Lex)}], {result.ToString()}");
                     return true;
                 }
 
-                _text += $"mov esi, DWORD[{FindAsmName(val)}]\n";
-                _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], esi\n";
+                _text.Add($"mov esi, DWORD[{FindAsmName(val)}]");
+                _text.Add($"mov DWORD[{FindAsmName(assignee.Lex)}], esi");
                 return true;
             }
             var reg = ExecutePostfix(exp);
             if (reg == null) return false;
-            _text += $"mov esi, DWORD[{FindAsmName(reg)}]\n";
-            _text += $"mov DWORD[{FindAsmName(assignee.Lex)}], esi\n";
+            _text.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
+            _text.Add($"mov DWORD[{FindAsmName(assignee.Lex)}], esi");
             return true;
         }
         
-        private Token.Token P_IntConst()
+        private bool P_IntConst(out Token.Token num)
         {
             if (_curr.Type != TokenType.IntConst)
             {
-                if (_curr.Type != TokenType.Minus) return null;
-                _curr = _scanner.GetNextToken();
-                if (_curr.Type != TokenType.IntConst) return null;
-                var num = _curr;
-                _curr = _scanner.GetNextToken();
-                return new Token.Token(TokenType.IntConst, $"-{num.Lex}", num.Line, num.Col);
+                if (_curr.Type == TokenType.Minus)
+                {
+                    _curr = _scanner.GetNextToken();
+                    if (_curr.Type == TokenType.IntConst)
+                    {
+                        num = new Token.Token(TokenType.IntConst, $"-{_curr.Lex}", _curr.Line, _curr.Col);
+                        _curr = _scanner.GetNextToken();
+                        return true;
+                    }
+                }
 
+                num = null;
+                return false;
             }
 
-            var intCont = _curr;
+            num = _curr;
             _curr = _scanner.GetNextToken();
-            return intCont;
+            return true;
         }
 
         /// <summary>
@@ -68,8 +74,7 @@ namespace Compiler.Parser
         {
             if (_curr.Type != TokenType.Num) return false;
             _curr = _scanner.GetNextToken();
-            var varName = P_VarName();
-            if (varName != null)
+            if (P_VarName(out var varName))
             {
                 _bssCtr++;
                 _bss.Add(new BssData(GenerateBssName(varName.Lex), varName.Lex, "resd", "1"));
@@ -104,27 +109,27 @@ namespace Compiler.Parser
                 var val = exp.Dequeue();
                 if (int.TryParse(val, out var result))
                 {
-                    _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], {result.ToString()}\n";
+                    _text.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], {result.ToString()}");
                     return P_Semicolon();
                 }
 
-                _text += $"mov esi, DWORD[{FindAsmName(val)}]\n";
-                _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi\n";
+                _text.Add($"mov esi, DWORD[{FindAsmName(val)}]");
+                _text.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
                 return P_Semicolon();
             }
 
             var reg = ExecutePostfix(exp);
             if (P_Semicolon())
             {
-                _text += $"mov esi, DWORD[{FindAsmName(reg)}]\n";
-                _text += $"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi\n";
+                _text.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
+                _text.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
                 return true;
             }
 
             return false;
         }
 
-        private string DetermineAsmOperand(string operand)
+        private string DetermineAsmOperand(string? operand)
         {
             if (operand == "edi") return "edi";
             return int.TryParse(operand, out var val) ? val.ToString() : "DWORD[" + FindAsmName(operand) + "]";
@@ -140,32 +145,32 @@ namespace Compiler.Parser
             switch (oper)
             {
                 case "+":
-                    _text += $"mov esi, {DetermineAsmOperand(op2)}\n";
-                    _text += $"add esi, {DetermineAsmOperand(op1)}\n";
-                    _text += $"mov DWORD[_{_tmpCtr}_tmp], esi\n";
+                    _text.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                    _text.Add($"add esi, {DetermineAsmOperand(op1)}");
+                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
                     break;
                 case "-":
-                    _text += $"mov esi, {DetermineAsmOperand(op2)}\n";
-                    _text += $"sub esi, {DetermineAsmOperand(op1)}\n";
-                    _text += $"mov DWORD[_{_tmpCtr}_tmp], esi\n";
+                    _text.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                    _text.Add($"sub esi, {DetermineAsmOperand(op1)}");
+                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
                     break;
                 case "*":
-                    _text += $"mov esi, {DetermineAsmOperand(op2)}\n";
-                    _text += $"imul esi, {DetermineAsmOperand(op1)}\n";
-                    _text += $"mov DWORD[_{_tmpCtr}_tmp], esi\n";
+                    _text.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                    _text.Add($"imul esi, {DetermineAsmOperand(op1)}");
+                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
                     break;
                 case "^":
                     _expCtr++;
-                    _text += "xor esi, esi\n";
-                    _text += "mov eax, 0x00000001\n";
-                    _text += $"_exp_top_{_expCtr}:\n";
-                    _text += $"cmp esi, {DetermineAsmOperand(op1)}\n";
-                    _text += $"jz _exp_out_{_expCtr}\n";
-                    _text += $"imul eax, {DetermineAsmOperand(op2)}\n";
-                    _text += "inc esi\n";
-                    _text += $"jmp _exp_top_{_expCtr}\n";
-                    _text += $"_exp_out_{_expCtr}:\n";
-                    _text += $"mov DWORD[_{_tmpCtr}_tmp], eax\n";
+                    _text.Add("xor esi, esi");
+                    _text.Add("mov eax, 0x00000001");
+                    _text.Add($"_exp_top_{_expCtr}:");
+                    _text.Add($"cmp esi, {DetermineAsmOperand(op1)}");
+                    _text.Add($"jz _exp_out_{_expCtr}");
+                    _text.Add($"imul eax, {DetermineAsmOperand(op2)}");
+                    _text.Add("inc esi");
+                    _text.Add($"jmp _exp_top_{_expCtr}");
+                    _text.Add($"_exp_out_{_expCtr}:");
+                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], eax");
                     break;
                 default:
                     return null;
@@ -210,8 +215,7 @@ namespace Compiler.Parser
 
         private bool P_Li(Stack<string> postfixStack, Queue<string> exp)
         {
-            var op = P_Op();
-             if (op == null) return P_Paren(postfixStack, exp);
+            if (!P_Op(out var op)) return P_Paren(postfixStack, exp);
             exp.Enqueue(op.Lex);
             return true;
 
@@ -311,15 +315,14 @@ namespace Compiler.Parser
             return true;
         }
 
-        private Token.Token P_Op()
+        private bool P_Op(out Token.Token operand)
         {
-            var operand = P_PosOrNeg();
-            return operand ?? P_VarName();
+            return P_PosOrNeg(out operand) || P_VarName(out operand);
         }
 
-        private Token.Token P_PosOrNeg()
+        private bool P_PosOrNeg(out Token.Token num)
         {
-            return P_IntConst();
+            return P_IntConst(out num);
         }
 
         private bool P_Plus()

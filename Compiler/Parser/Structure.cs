@@ -5,6 +5,33 @@ namespace Compiler.Parser
     public partial class Parser
     {
         /// <summary>
+        /// (
+        /// </summary>
+        /// <returns></returns>
+        private bool P_LParen()
+        {
+            return CheckToken(TokenType.Lparen);
+        }
+
+        /// <summary>
+        /// :
+        /// </summary>
+        /// <returns></returns>
+        private bool P_Colon()
+        {
+            return CheckToken(TokenType.Colon);
+        }
+
+        /// <summary>
+        /// )
+        /// </summary>
+        /// <returns></returns>
+        private bool P_RParen()
+        {
+            return CheckToken(TokenType.Rparen);
+        }
+        
+        /// <summary>
         /// {
         /// </summary>
         /// <returns></returns>
@@ -81,14 +108,13 @@ namespace Compiler.Parser
         private bool P_Statement()
         {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            return ((P_WriteStmt() || P_ReadStmt() || P_AssignStmt() || P_IfStmt() || P_NumDeclStmt() || P_ArrayStmt() ||
+            return ((P_WriteStmt() || P_ReadStmt() || P_AssignStmt() || P_IfStmt() || P_CaseStmt() || P_NumDeclStmt() || P_ArrayStmt() ||
                      P_ForStatement()) && P_Statement()) || true;
         }
 
         private bool P_AssignStmt()
         {
-            var assignee = P_VarName();
-            if (assignee != null)
+            if (P_VarName(out var assignee))
             {
                 return P_NumAssignStmt(assignee) || P_ArrayAssignStmt(assignee);
             }
@@ -96,12 +122,17 @@ namespace Compiler.Parser
             return false;
         }
 
-        private Token.Token P_VarName()
+        private bool P_VarName(out Token.Token token)
         {
-            if (_curr.Type != TokenType.VarName) return null;
-            var varName = _curr;
+            if (_curr.Type != TokenType.VarName)
+            {
+                token = null;
+                return false;
+            }
+
+            token = _curr;
             _curr = _scanner.GetNextToken();
-            return varName;
+            return true;
         }
     }
 }

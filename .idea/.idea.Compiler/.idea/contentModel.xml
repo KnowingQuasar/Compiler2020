@@ -26,6 +26,7 @@
         <e p="Parser" t="Include">
           <e p="Arrays.cs" t="Include" />
           <e p="BssData.cs" t="Include" />
+          <e p="Case.cs" t="Include" />
           <e p="Conditionals.cs" t="Include" />
           <e p="Loops.cs" t="Include" />
           <e p="Numbers.cs" t="Include" />

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,19 +11,20 @@ namespace Compiler.Parser
     {
         private Token.Token _curr;
         private readonly Scanner.Scanner _scanner;
-        private StreamWriter _asmFile;
-        private StreamWriter _errFile;
+        private StreamWriter? _asmFile;
+        private StreamWriter? _errFile;
         private HashSet<BssData> _bss;
         private HashSet<PData> _data;
+        private ArrayList _text;
         private int _bssCtr;
         private int _dataCtr;
-        private string _text;
         private int _expCtr;
         private int _arrCtr;
-        private string _asmFileName;
+        private string? _asmFileName;
         private List<PArray> _arrs;
         private int _tmpCtr;
         private int _loopCtr;
+        private int _switchCtr;
         private int _ifCtr;
         private int _elseCtr;
         
@@ -33,6 +35,7 @@ namespace Compiler.Parser
             _bss = new HashSet<BssData>();
             _data = new HashSet<PData>();
             _arrs = new List<PArray>();
+            _text = new ArrayList();
             _bssCtr = -1;
             _dataCtr = -1;
             _expCtr = -1;
@@ -41,10 +44,11 @@ namespace Compiler.Parser
             _loopCtr = -1;
             _ifCtr = -1;
             _elseCtr = -1;
+            _switchCtr = -1;
             _asmFileName = null;
         }
 
-        public string Parse(string fileName)
+        public string? Parse(string fileName)
         {
             if (!_scanner.OpenFile(fileName))
             {
@@ -65,6 +69,10 @@ namespace Compiler.Parser
             _errFile?.WriteLine(message);
         }
 
+        private string GenerateTextSection()
+        {
+            return _text.Cast<object?>().Aggregate("", (current, item) => current + (item + "\n"));
+        }
         private string GenerateBssName(string lex)
         {
             return $"_{_bssCtr.ToString()}_{lex.ToLower()}";
@@ -91,14 +99,14 @@ namespace Compiler.Parser
             return _bss.Aggregate("section .bss\n", (current, item) => current + $"{item.AsmName} {item.DataType} {item.Size}\n");
         }
 
-        private string FindAsmName(string realName)
+        private string? FindAsmName(string realName)
         {
             foreach (var item in _bss.Where(item => string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)))
             {
                 return item.AsmName;
             }
 
-            return (from item in _data where string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase) select item.AsmName).FirstOrDefault();
+            return (from item in _data where string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase) select item.AsmName).FirstOrDefault() ?? null;
         }
 
         private void LogError(TokenType actualToken, TokenType expectedToken)
@@ -134,19 +142,20 @@ namespace Compiler.Parser
                     _asmFile.WriteLine("extern _scanf");
                     _asmFile.WriteLine("extern _ExitProcess@4");
 
-                    _text += "section .text\n";
-                    _text += "Start:\n";
+                    _text.Add("section .text");
+                    _text.Add("Start:");
                     
                     _curr = _scanner.GetNextToken();
                     
                     if (P_Semicolon() && P_Begin() && P_Statement() && P_End() && P_Dot())
                     {
-                        _text += "exit:\n";
-                        _text += "mov eax, 0x0\n";
-                        _text += "call _ExitProcess@4";
+                        _text.Add("exit:");
+                        _text.Add("mov eax, 0x0");
+                        _text.Add("call _ExitProcess@4");
+                        
                         _asmFile.Write(BuildData());
                         _asmFile.Write(BuildBss());
-                        _asmFile.Write(_text);
+                        _asmFile.Write(GenerateTextSection());
                         
                         _asmFile.Close();
                         _asmFile.Dispose();

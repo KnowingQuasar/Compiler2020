@@ -28,9 +28,7 @@ namespace Compiler.Parser
         {
             if (P_For())
             {
-                var accumulator = P_VarName();
-                
-                if (accumulator != null)
+                if (P_VarName(out var accumulator))
                 {
                     if (P_Eq())
                     {
@@ -48,10 +46,10 @@ namespace Compiler.Parser
                                 _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
                                 PerformExpression(step);
                                 _loopCtr++;
-                                _text += $"_loop_start_{_loopCtr}:\n";
-                                _text += $"mov esi, DWORD[{FindAsmName(to.Lex)}]\n";
-                                _text += $"cmp DWORD[{FindAsmName(accumulator.Lex)}], esi\n";
-                                _text += $"jg _loop_end_{_loopCtr}\n";
+                                _text.Add($"_loop_start_{_loopCtr}:");
+                                _text.Add($"mov esi, DWORD[{FindAsmName(to.Lex)}]");
+                                _text.Add($"cmp DWORD[{FindAsmName(accumulator.Lex)}], esi");
+                                _text.Add($"jg _loop_end_{_loopCtr}");
 
                                 var origLoopCtr = _loopCtr;
                                 if (P_Do())
@@ -62,10 +60,10 @@ namespace Compiler.Parser
                                         {
                                             if (P_Rbrace())
                                             {
-                                                _text += $"mov edi, DWORD[{FindAsmName(step.Lex)}]\n";
-                                                _text += $"add DWORD[{FindAsmName(accumulator.Lex)}], edi\n";
-                                                _text += $"jmp _loop_start_{origLoopCtr}\n";
-                                                _text += $"_loop_end_{origLoopCtr}:\n";
+                                                _text.Add($"mov edi, DWORD[{FindAsmName(step.Lex)}]");
+                                                _text.Add($"add DWORD[{FindAsmName(accumulator.Lex)}], edi");
+                                                _text.Add($"jmp _loop_start_{origLoopCtr}");
+                                                _text.Add($"_loop_end_{origLoopCtr}:");
                                                 return true;
                                             }
                                         }

@@ -92,14 +92,20 @@ namespace Compiler.Parser
         {
             if (P_Comma())
             {
-                if (int.TryParse(P_PosOrNeg().Lex, out var lbound))
+                if (P_PosOrNeg(out var num))
                 {
-                    if (P_Dot() && P_Dot())
+                    if (int.TryParse(num.Lex, out var lbound))
                     {
-                        if (int.TryParse(P_PosOrNeg().Lex, out var rbound))
+                        if (P_Dot() && P_Dot())
                         {
-                            arr.AddArrData(new PArray.ArrayData(lbound, rbound));
-                            return P_ArrayList(arr);
+                            if (P_PosOrNeg(out num))
+                            {
+                                if (int.TryParse(num.Lex, out var rbound))
+                                {
+                                    arr.AddArrData(new PArray.ArrayData(lbound, rbound));
+                                    return P_ArrayList(arr);
+                                }
+                            }
                         }
                     }
                 }
@@ -112,25 +118,30 @@ namespace Compiler.Parser
         {
             if (P_Array())
             {
-                var arrName = P_VarName();
-                if (arrName != null)
+                if (P_VarName(out var arrName))
                 {
                     if (P_LeftBracket())
                     {
-                        if (int.TryParse(P_PosOrNeg().Lex, out var lbound))
+                        if (P_PosOrNeg(out var num))
                         {
-                            if (P_Dot() && P_Dot())
+                            if (int.TryParse(num.Lex, out var lbound))
                             {
-                                if (int.TryParse(P_PosOrNeg().Lex, out var rbound))
+                                if (P_Dot() && P_Dot())
                                 {
-                                    var arrData = new PArray.ArrayData(lbound, rbound);
-                                    var arr = new PArray(arrName.Lex, arrData);
-                                    _arrs.Add(arr);
-                                    P_ArrayList(arr);
-                                    _arrCtr++;
-                                    _bss.Add(new BssData($"arr_{_arrCtr}_{arrName.Lex}", arrName.Lex, "resb",
-                                        arr.ComputeAllocSpace().ToString()));
-                                    return P_Semicolon();
+                                    if (P_PosOrNeg(out num))
+                                    {
+                                        if (int.TryParse(num.Lex, out var rbound))
+                                        {
+                                            var arrData = new PArray.ArrayData(lbound, rbound);
+                                            var arr = new PArray(arrName.Lex, arrData);
+                                            _arrs.Add(arr);
+                                            P_ArrayList(arr);
+                                            _arrCtr++;
+                                            _bss.Add(new BssData($"arr_{_arrCtr}_{arrName.Lex}", arrName.Lex, "resb",
+                                                arr.ComputeAllocSpace().ToString()));
+                                            return P_Semicolon();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -147,11 +158,15 @@ namespace Compiler.Parser
         {
             if (P_LeftBracket())
             {
-                if (int.TryParse(P_PosOrNeg().Lex, out var idx))
+                if (P_PosOrNeg(out var num))
                 {
-                    var indices = new List<int> {idx};
-                    return P_ArrayAssignList(assignee, indices);
+                    if (int.TryParse(num.Lex, out var idx))
+                    {
+                        var indices = new List<int> {idx};
+                        return P_ArrayAssignList(assignee, indices);
+                    }
                 }
+               
             }
 
             return false;
@@ -161,10 +176,13 @@ namespace Compiler.Parser
         {
             if (P_Comma())
             {
-                if (int.TryParse(P_PosOrNeg().Lex, out var idx))
+                if (P_PosOrNeg(out var num))
                 {
-                    indices.Add(idx);
-                    return P_ArrayAssignList(assignee, indices);
+                    if (int.TryParse(num.Lex, out var idx))
+                    {
+                        indices.Add(idx);
+                        return P_ArrayAssignList(assignee, indices);
+                    }
                 }
             }
 
@@ -172,15 +190,18 @@ namespace Compiler.Parser
             {
                 if (P_Eq())
                 {
-                    if (int.TryParse(P_PosOrNeg().Lex, out var val))
+                    if (P_PosOrNeg(out var num))
                     {
-                        var arr = _arrs.FirstOrDefault(x => x.Name == assignee.Lex);
-                        if (arr == null) return false;
-                        _text += $"mov edi, {arr.GetRef(indices).ToString()}\n";
-                        _text += $"add edi, {FindAsmName(assignee.Lex)}\n";
-                        _text += $"mov DWORD[edi], {val.ToString()}\n";
-                        _text += "xor edi, edi\n";
-                        return P_Semicolon();
+                        if (int.TryParse(num.Lex, out var val))
+                        {
+                            var arr = _arrs.FirstOrDefault(x => x.Name == assignee.Lex);
+                            if (arr == null) return false;
+                            _text.Add($"mov edi, {arr.GetRef(indices).ToString()}");
+                            _text.Add($"add edi, {FindAsmName(assignee.Lex)}");
+                            _text.Add($"mov DWORD[edi], {val.ToString()}");
+                            _text.Add("xor edi, edi");
+                            return P_Semicolon();
+                        }
                     }
                 }
             }

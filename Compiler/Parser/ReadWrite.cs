@@ -15,8 +15,8 @@ namespace Compiler.Parser
             {
                 _dataCtr++;
                 _data.Add(new PData($"s{_dataCtr}", $"s{_dataCtr}", "db", $"{alpha.Lex},0x0d,0x0a,0"));
-                _text += $"push s{_dataCtr}\n";
-                _text += "push stringPrinter\n";
+                _text.Add($"push s{_dataCtr}");
+                _text.Add("push stringPrinter");
             } 
             else
             {
@@ -25,10 +25,21 @@ namespace Compiler.Parser
                     var indices = new List<int>();
                     for (;;)
                     {
-                        if (int.TryParse(P_PosOrNeg().Lex, out var idx))
+                        if (P_PosOrNeg(out var num))
                         {
-                            indices.Add(idx);
-                            if (!P_Comma()) break;
+                            if (int.TryParse(num.Lex, out var idx))
+                            {
+                                indices.Add(idx);
+                                if (!P_Comma()) break;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            break;
                         }
                     }
 
@@ -36,20 +47,20 @@ namespace Compiler.Parser
                     {
                         var arr = _arrs.FirstOrDefault(x => x.Name == alpha.Lex);
                         if (arr == null) return false;
-                        _text += $"mov edi, {arr.GetRef(indices).ToString()}\n";
-                        _text += $"add edi, {FindAsmName(alpha.Lex)}\n";
-                        _text += "push DWORD[edi]\n";
-                        _text += "push numberPrinter\n";
-                        _text += "call _printf\n";
-                        _text += "add esp, 0x08\n";
+                        _text.Add($"mov edi, {arr.GetRef(indices).ToString()}");
+                        _text.Add($"add edi, {FindAsmName(alpha.Lex)}");
+                        _text.Add("push DWORD[edi]");
+                        _text.Add("push numberPrinter");
+                        _text.Add("call _printf");
+                        _text.Add("add esp, 0x08");
                         return P_Semicolon();
                     }
                 }
-                _text += $"push DWORD[{FindAsmName(alpha.Lex)}]\n";
-                _text += "push numberPrinter\n";
+                _text.Add($"push DWORD[{FindAsmName(alpha.Lex)}]");
+                _text.Add("push numberPrinter");
             }
-            _text += "call _printf\n";
-            _text += "add esp, 0x08\n";
+            _text.Add("call _printf");
+            _text.Add("add esp, 0x08");
             return P_Semicolon();
         }
 
@@ -57,20 +68,24 @@ namespace Compiler.Parser
         {
             if (_curr.Type != TokenType.Read) return false;
             _curr = _scanner.GetNextToken();
-            var assignee = P_VarName();
-            _text += "pusha\n";
-            _text += $"push {FindAsmName(assignee.Lex)}\n";
-            _text += "push dword int_format\n";
-            _text += "call _scanf\n";
-            _text += "add esp, 0x04\n";
-            _text += "popa\n";
-            return P_Semicolon();
+            if (P_VarName(out var assignee))
+            {
+                _text.Add("pusha");
+                _text.Add($"push {FindAsmName(assignee.Lex)}");
+                _text.Add("push dword int_format");
+                _text.Add("call _scanf");
+                _text.Add("add esp, 0x04");
+                _text.Add("popa");
+                return P_Semicolon();
+            }
+
+            return false;
         }
 
         private Token.Token P_Alpha()
         {
             var alpha = P_StrConst();
-            alpha ??= P_VarName();
+            if (alpha == null) P_VarName(out alpha);
             return alpha;
         }
     }
