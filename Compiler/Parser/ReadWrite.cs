@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Compiler.Token;
@@ -6,36 +7,34 @@ namespace Compiler.Parser
 {
     public partial class Parser
     {
-        private bool P_WriteStmt()
+        private bool P_WriteStmt(bool isProc)
         {
             if (_curr.Type != TokenType.Write) return false;
             _curr = _scanner.GetNextToken();
-            var alpha = P_Alpha();
-            if (alpha.Type == TokenType.StrConst)
+            if (!P_Alpha(isProc, out var alpha)) return false;
+            var tmp = new ArrayList();
+            if (alpha != null && alpha.Type == TokenType.StrConst)
             {
                 _dataCtr++;
                 _data.Add(new PData($"s{_dataCtr}", $"s{_dataCtr}", "db", $"{alpha.Lex},0x0d,0x0a,0"));
-                _text.Add($"push s{_dataCtr}");
-                _text.Add("push stringPrinter");
+                tmp.Add($"push s{_dataCtr}");
+                tmp.Add("push stringPrinter");
             } 
             else
             {
                 if (P_LeftBracket())
                 {
-                    var indices = new List<int>();
+                    var indices = new ArrayList();
                     for (;;)
                     {
-                        if (P_PosOrNeg(out var num))
+                        _tmpCtr++;
+                        var idx = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
+                        _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+
+                        if (PerformExpression(isProc, idx))
                         {
-                            if (int.TryParse(num.Lex, out var idx))
-                            {
-                                indices.Add(idx);
-                                if (!P_Comma()) break;
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            indices.Add(idx);
+                            if (!P_Comma()) break;
                         }
                         else
                         {
@@ -47,46 +46,57 @@ namespace Compiler.Parser
                     {
                         var arr = _arrs.FirstOrDefault(x => x.Name == alpha.Lex);
                         if (arr == null) return false;
-                        _text.Add($"mov edi, {arr.GetRef(indices).ToString()}");
-                        _text.Add($"add edi, {FindAsmName(alpha.Lex)}");
-                        _text.Add("push DWORD[edi]");
-                        _text.Add("push numberPrinter");
-                        _text.Add("call _printf");
-                        _text.Add("add esp, 0x08");
+                        tmp.AddRange(arr.GetRef(indices));
+                        tmp.Add($"add eax, {FindAsmName(alpha.Lex)}");
+                        tmp.Add("push DWORD[eax]");
+                        tmp.Add("push numberPrinter");
+                        tmp.Add("call _printf");
+                        tmp.Add("add esp, 0x08");
+                        AddToCorrectSection(isProc, tmp);
                         return P_Semicolon();
                     }
                 }
-                _text.Add($"push DWORD[{FindAsmName(alpha.Lex)}]");
-                _text.Add("push numberPrinter");
+                tmp.Add($"push DWORD[{FindAsmName(alpha.Lex)}]");
+                tmp.Add("push numberPrinter");
             }
-            _text.Add("call _printf");
-            _text.Add("add esp, 0x08");
+            tmp.Add("call _printf");
+            tmp.Add("add esp, 0x08");
+            AddToCorrectSection(isProc, tmp);
             return P_Semicolon();
         }
 
-        private bool P_ReadStmt()
+        private bool P_ReadStmt(bool isProc)
         {
             if (_curr.Type != TokenType.Read) return false;
             _curr = _scanner.GetNextToken();
             if (P_VarName(out var assignee))
             {
-                _text.Add("pusha");
-                _text.Add($"push {FindAsmName(assignee.Lex)}");
-                _text.Add("push dword int_format");
-                _text.Add("call _scanf");
-                _text.Add("add esp, 0x04");
-                _text.Add("popa");
+                var tmp = new ArrayList
+                {
+                    "pusha",
+                    $"push {FindAsmName(assignee.Lex)}",
+                    "push dword int_format",
+                    "call _scanf",
+                    "add esp, 0x04",
+                    "popa"
+                };
+                AddToCorrectSection(isProc, tmp);
                 return P_Semicolon();
             }
 
             return false;
         }
 
-        private Token.Token P_Alpha()
+        private bool P_Alpha(bool isProc, out Token.Token? token)
         {
-            var alpha = P_StrConst();
-            if (alpha == null) P_VarName(out alpha);
-            return alpha;
+            if (!(P_StrConst(out token) || P_VarName(out token)))
+            {
+                _tmpCtr++;
+                var writeData = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
+                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                return PerformExpression(isProc, writeData);
+            }
+            return true;
         }
     }
 }

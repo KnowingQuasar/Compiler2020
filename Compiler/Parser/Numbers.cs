@@ -1,42 +1,56 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Compiler.Token;
 
 namespace Compiler.Parser
 {
     public partial class Parser
     {
-        private bool PerformExpression(Token.Token assignee)
+        private bool PerformExpression(bool isProc, Token.Token? assignee)
         {
             var postfixStack = new Stack<string>();
             var exp = new Queue<string>();
-            if (!P_Exp(postfixStack, exp)) return false;
+            if (!P_Exp(isProc, postfixStack, exp)) return false;
             for (;;)
             {
                 if (!postfixStack.TryPop(out var val)) break;
                 exp.Enqueue(val);
             }
 
+            var tmp = new ArrayList();
             if (exp.Count == 1)
             {
                 var val = exp.Dequeue();
                 if (int.TryParse(val, out var result))
                 {
-                    _text.Add($"mov DWORD[{FindAsmName(assignee.Lex)}], {result.ToString()}");
+                    tmp.Add($"mov DWORD[{FindAsmName(assignee?.Lex)}], {result.ToString()}");
+                    AddToCorrectSection(isProc, tmp);
                     return true;
                 }
 
-                _text.Add($"mov esi, DWORD[{FindAsmName(val)}]");
-                _text.Add($"mov DWORD[{FindAsmName(assignee.Lex)}], esi");
+                tmp.Add($"mov esi, DWORD[{FindAsmName(val)}]");
+                tmp.Add($"mov DWORD[{FindAsmName(assignee?.Lex)}], esi");
+                AddToCorrectSection(isProc, tmp);
                 return true;
             }
-            var reg = ExecutePostfix(exp);
-            if (reg == null) return false;
-            _text.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
-            _text.Add($"mov DWORD[{FindAsmName(assignee.Lex)}], esi");
+            var reg = ExecutePostfix(isProc, exp);
+            tmp.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
+            tmp.Add($"mov DWORD[{FindAsmName(assignee?.Lex)}], esi");
+            AddToCorrectSection(isProc, tmp);
             return true;
         }
+
+        /// <summary>
+        /// NUM
+        /// </summary>
+        /// <returns></returns>
+        private bool P_Num()
+        {
+            return CheckToken(TokenType.Num);
+        }
         
-        private bool P_IntConst(out Token.Token num)
+        private bool P_IntConst(out Token.Token? num)
         {
             if (_curr.Type != TokenType.IntConst)
             {
@@ -64,32 +78,32 @@ namespace Compiler.Parser
         /// [variable name] = [exp] ;
         /// </summary>
         /// <returns></returns>
-        private bool P_NumAssignStmt(Token.Token assignee)
+        private bool P_NumAssignStmt(bool isProc, Token.Token? assignee)
         {
             if (!P_Eq()) return false;
-            return PerformExpression(assignee) && P_Semicolon();
+            return PerformExpression(isProc, assignee) && P_Semicolon();
         }
 
-        private bool P_NumDeclStmt()
+        private bool P_NumDeclStmt(bool isProc)
         {
             if (_curr.Type != TokenType.Num) return false;
             _curr = _scanner.GetNextToken();
             if (P_VarName(out var varName))
             {
                 _bssCtr++;
-                _bss.Add(new BssData(GenerateBssName(varName.Lex), varName.Lex, "resd", "1"));
-                return P_Delta(varName);
+                _bss.Add(new BssData(GenerateBssName(varName?.Lex), varName?.Lex, "resd", "1"));
+                return P_Delta(isProc, varName);
             }
 
             return false;
         }
 
-        private bool P_Delta(Token.Token declaredVar)
+        private bool P_Delta(bool isProc, Token.Token? declaredVar)
         {
             if (P_Semicolon())
             {
                 _bssCtr++;
-                _bss.Add(new BssData(GenerateBssName(declaredVar.Lex), declaredVar.Lex, "resd", "1"));
+                _bss.Add(new BssData(GenerateBssName(declaredVar?.Lex), declaredVar?.Lex, "resd", "1"));
                 return true;
             }
 
@@ -97,89 +111,90 @@ namespace Compiler.Parser
 
             var postfixStack = new Stack<string>();
             var exp = new Queue<string>();
-            if (!P_Exp(postfixStack, exp)) return false;
+            if (!P_Exp(isProc, postfixStack, exp)) return false;
             for (;;)
             {
                 if (!postfixStack.TryPop(out var val)) break;
                 exp.Enqueue(val);
             }
 
+            var tmp = new ArrayList();
             if (exp.Count == 1)
             {
                 var val = exp.Dequeue();
                 if (int.TryParse(val, out var result))
                 {
-                    _text.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], {result.ToString()}");
+                    tmp.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], {result.ToString()}");
+                    AddToCorrectSection(isProc, tmp);
                     return P_Semicolon();
                 }
 
-                _text.Add($"mov esi, DWORD[{FindAsmName(val)}]");
-                _text.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
+                tmp.Add($"mov esi, DWORD[{FindAsmName(val)}]");
+                tmp.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
+                AddToCorrectSection(isProc, tmp);
                 return P_Semicolon();
             }
 
-            var reg = ExecutePostfix(exp);
+            var reg = ExecutePostfix(isProc, exp);
             if (P_Semicolon())
             {
-                _text.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
-                _text.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
+                tmp.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
+                tmp.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
+                AddToCorrectSection(isProc, tmp);
                 return true;
             }
 
             return false;
         }
-
-        private string DetermineAsmOperand(string? operand)
-        {
-            if (operand == "edi") return "edi";
-            return int.TryParse(operand, out var val) ? val.ToString() : "DWORD[" + FindAsmName(operand) + "]";
-        }
-
-        private string ExecuteOperator(string op1, string op2, string oper)
+        
+        private string? ExecuteOperator(bool isProc, string op1, string op2, string oper)
         {
             if (!IsOperator(oper)) return null;
 
             _tmpCtr++;
             _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
             
+            var tmp = new ArrayList();
             switch (oper)
             {
                 case "+":
-                    _text.Add($"mov esi, {DetermineAsmOperand(op2)}");
-                    _text.Add($"add esi, {DetermineAsmOperand(op1)}");
-                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                    tmp.Add($"add esi, {DetermineAsmOperand(op1)}");
+                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
                     break;
                 case "-":
-                    _text.Add($"mov esi, {DetermineAsmOperand(op2)}");
-                    _text.Add($"sub esi, {DetermineAsmOperand(op1)}");
-                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                    tmp.Add($"sub esi, {DetermineAsmOperand(op1)}");
+                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
                     break;
                 case "*":
-                    _text.Add($"mov esi, {DetermineAsmOperand(op2)}");
-                    _text.Add($"imul esi, {DetermineAsmOperand(op1)}");
-                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                    tmp.Add($"imul esi, {DetermineAsmOperand(op1)}");
+                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
                     break;
                 case "^":
                     _expCtr++;
-                    _text.Add("xor esi, esi");
-                    _text.Add("mov eax, 0x00000001");
-                    _text.Add($"_exp_top_{_expCtr}:");
-                    _text.Add($"cmp esi, {DetermineAsmOperand(op1)}");
-                    _text.Add($"jz _exp_out_{_expCtr}");
-                    _text.Add($"imul eax, {DetermineAsmOperand(op2)}");
-                    _text.Add("inc esi");
-                    _text.Add($"jmp _exp_top_{_expCtr}");
-                    _text.Add($"_exp_out_{_expCtr}:");
-                    _text.Add($"mov DWORD[_{_tmpCtr}_tmp], eax");
+                    tmp.Add("xor esi, esi");
+                    tmp.Add("mov eax, 0x00000001");
+                    tmp.Add($"_exp_top_{_expCtr}:");
+                    tmp.Add($"cmp esi, {DetermineAsmOperand(op1)}");
+                    tmp.Add($"jz _exp_out_{_expCtr}");
+                    tmp.Add($"imul eax, {DetermineAsmOperand(op2)}");
+                    tmp.Add("inc esi");
+                    tmp.Add($"jmp _exp_top_{_expCtr}");
+                    tmp.Add($"_exp_out_{_expCtr}:");
+                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], eax");
                     break;
                 default:
                     return null;
             }
+            
+            AddToCorrectSection(isProc, tmp);
 
             return $"_{_tmpCtr}_tmp";
         }
         
-        private string ExecutePostfix(Queue<string> exp)
+        private string ExecutePostfix(bool isProc, Queue<string> exp)
         {
             var stack = new Stack<string>();
             var finalReg = "";
@@ -195,7 +210,7 @@ namespace Compiler.Parser
 
                     if (op1 == null || op2 == null) return null;
 
-                    var tmpVal = ExecuteOperator(op1, op2, val);
+                    var tmpVal = ExecuteOperator(isProc, op1, op2, val);
                     finalReg = tmpVal;
                     stack.Push(tmpVal);
                 }
@@ -208,25 +223,25 @@ namespace Compiler.Parser
             return finalReg;
         }
 
-        private bool P_Exp(Stack<string> postfixStack, Queue<string> exp)
+        private bool P_Exp(bool isProc, Stack<string> postfixStack, Queue<string> exp)
         {
-            return P_Li(postfixStack, exp) & P_Ae(postfixStack, exp);
+            return P_Li(isProc, postfixStack, exp) & P_Ae(isProc, postfixStack, exp);
         }
 
-        private bool P_Li(Stack<string> postfixStack, Queue<string> exp)
+        private bool P_Li(bool isProc, Stack<string> postfixStack, Queue<string> exp)
         {
-            if (!P_Op(out var op)) return P_Paren(postfixStack, exp);
+            if (!P_Op(isProc, out var op)) return P_Paren(isProc, postfixStack, exp);
             exp.Enqueue(op.Lex);
             return true;
 
         }
 
-        private bool P_Paren(Stack<string> postfixStack, Queue<string> exp)
+        private bool P_Paren(bool isProc, Stack<string> postfixStack, Queue<string> exp)
         {
             if (_curr.Type != TokenType.Lparen) return false;
             postfixStack.Push("(");
             _curr = _scanner.GetNextToken();
-            P_Exp(postfixStack, exp);
+            P_Exp(isProc, postfixStack, exp);
             if (_curr.Type != TokenType.Rparen) return false;
             _curr = _scanner.GetNextToken();
             for (;;)
@@ -286,41 +301,110 @@ namespace Compiler.Parser
             return true;
         }
 
-        private bool P_Ae(Stack<string> postfixStack, Queue<string> exp)
+        private bool P_Ae(bool isProc, Stack<string> postfixStack, Queue<string> exp)
         {
             if (P_Multiply())
             {
-                return HandleOperator(postfixStack, exp, "*") && P_Li(postfixStack, exp) && P_Ae(postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "*") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
             }
 
             if (P_Divide())
             {
-                return HandleOperator(postfixStack, exp, "/") && P_Li(postfixStack, exp) && P_Ae(postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "/") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
             }
 
             if (P_Pow())
             {
-                return HandleOperator(postfixStack, exp, "^") && P_Li(postfixStack, exp) && P_Ae(postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "^") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
             }
             if (P_Plus())
             {
-                return HandleOperator(postfixStack, exp, "+") && P_Li(postfixStack, exp) && P_Ae(postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "+") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
             }
 
             if (P_Minus())
             {
-                return HandleOperator(postfixStack, exp, "-") && P_Li(postfixStack, exp) && P_Ae(postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "-") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
             }
 
             return true;
         }
 
-        private bool P_Op(out Token.Token operand)
+        private bool P_Op(bool isProc, out Token.Token? operand)
         {
-            return P_PosOrNeg(out operand) || P_VarName(out operand);
+            if(P_PosOrNeg(out operand)) return true;
+            if (P_VarName(out operand))
+            {
+                if (P_Ref(isProc, operand, out var result))
+                {
+                    if (result != null) operand = result;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        private bool P_PosOrNeg(out Token.Token num)
+        private bool P_Ref(bool isProc, Token.Token? operand, out Token.Token? result)
+        {
+            if (P_Ap(isProc, operand, out result))
+            {
+                return true;
+            }
+
+            return true;
+        }
+
+        private bool P_Ap(bool isProc, Token.Token? operand, out Token.Token? result)
+        {
+            if (P_LeftBracket())
+            {
+                var indices = new ArrayList();
+                for (;;)
+                {
+                    _tmpCtr++;
+                    var idx = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
+                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+
+                    if (PerformExpression(isProc, idx))
+                    {
+                        indices.Add(idx);
+                        if (!P_Comma()) break;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (P_RightBracket())
+                {
+                    var arr = _arrs.FirstOrDefault(x => x.Name == operand.Lex);
+                    if (arr == null)
+                    {
+                        result = null;
+                        return false;
+                    }
+
+                    var tmp = new ArrayList();
+                    tmp.AddRange(arr.GetRef(indices));
+                    
+                    _tmpCtr++;
+                    result = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
+                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                    tmp.Add($"add eax, {FindAsmName(operand?.Lex)}");
+                    tmp.Add($"mov eax, DWORD[eax]");
+                    tmp.Add($"mov {DetermineAsmOperand(result.Lex)}, eax");
+                    AddToCorrectSection(isProc, tmp);
+                    return true;
+                }
+            }
+
+            result = null;
+            return false;
+        }
+
+        private bool P_PosOrNeg(out Token.Token? num)
         {
             return P_IntConst(out num);
         }

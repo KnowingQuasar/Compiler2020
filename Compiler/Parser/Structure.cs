@@ -1,3 +1,4 @@
+using System.Collections;
 using Compiler.Token;
 
 namespace Compiler.Parser
@@ -30,7 +31,7 @@ namespace Compiler.Parser
         {
             return CheckToken(TokenType.Rparen);
         }
-        
+
         /// <summary>
         /// {
         /// </summary>
@@ -95,6 +96,15 @@ namespace Compiler.Parser
         }
 
         /// <summary>
+        /// *
+        /// </summary>
+        /// <returns></returns>
+        private bool P_Asterisk()
+        {
+            return CheckToken(TokenType.Asterisk);
+        }
+
+        /// <summary>
         /// [read statement] [statement] | [write statement] [statement] | [for statement] [statement] |
         /// [if statement] [statement] | [case statement] [statement] | [num assignment statement] [statement] |
         /// [string assignment statement] [statement] | [array statement] [statement] |
@@ -105,24 +115,35 @@ namespace Compiler.Parser
         /// </summary>
         /// <returns></returns>
         // ReSharper disable once FunctionRecursiveOnAllPaths
-        private bool P_Statement()
+        private bool P_Statement(bool isProc = false)
         {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            return ((P_WriteStmt() || P_ReadStmt() || P_AssignStmt() || P_IfStmt() || P_CaseStmt() || P_NumDeclStmt() || P_ArrayStmt() ||
-                     P_ForStatement()) && P_Statement()) || true;
+            return ((P_WriteStmt(isProc) || P_ReadStmt(isProc) || P_ProcDeclStmt() || P_AssignStmt(isProc) || P_IfStmt(isProc) ||
+                     P_CaseStmt(isProc) || P_NumDeclStmt(isProc) || P_ArrayStmt(isProc) ||
+                     P_ForStatement(isProc)) && P_Statement(isProc)) || true;
         }
 
-        private bool P_AssignStmt()
+        /// <summary>
+        /// Handles both:
+        /// [NUMBER ASSIGNMENT] & [ARRAY ASSIGNMENT]
+        /// </summary>
+        /// <returns></returns>
+        private bool P_AssignStmt(bool isProc)
         {
             if (P_VarName(out var assignee))
             {
-                return P_NumAssignStmt(assignee) || P_ArrayAssignStmt(assignee);
+                return P_NumAssignStmt(isProc, assignee) || P_ArrayAssignStmt(isProc, assignee) || P_ProcCallStmt(assignee);
             }
 
             return false;
         }
 
-        private bool P_VarName(out Token.Token token)
+        /// <summary>
+        /// Handles variable names
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        private bool P_VarName(out Token.Token? token)
         {
             if (_curr.Type != TokenType.VarName)
             {

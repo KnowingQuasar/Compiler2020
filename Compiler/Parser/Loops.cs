@@ -1,3 +1,4 @@
+using System.Collections;
 using Compiler.Token;
 
 namespace Compiler.Parser
@@ -24,7 +25,7 @@ namespace Compiler.Parser
             return CheckToken(TokenType.Do);
         }
 
-        public bool P_ForStatement()
+        public bool P_ForStatement(bool isProc)
         {
             if (P_For())
             {
@@ -32,24 +33,25 @@ namespace Compiler.Parser
                 {
                     if (P_Eq())
                     {
-                        PerformExpression(accumulator);
+                        PerformExpression(isProc, accumulator);
                         if (P_To())
                         {
                             _tmpCtr++;
                             var to = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
                             _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
-                            PerformExpression(to);
+                            PerformExpression(isProc, to);
                             if (P_Step())
                             {
+                                var tmp = new ArrayList();
                                 _tmpCtr++;
                                 var step = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
                                 _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
-                                PerformExpression(step);
+                                PerformExpression(isProc, step);
                                 _loopCtr++;
-                                _text.Add($"_loop_start_{_loopCtr}:");
-                                _text.Add($"mov esi, DWORD[{FindAsmName(to.Lex)}]");
-                                _text.Add($"cmp DWORD[{FindAsmName(accumulator.Lex)}], esi");
-                                _text.Add($"jg _loop_end_{_loopCtr}");
+                                tmp.Add($"_loop_start_{_loopCtr}:");
+                                tmp.Add($"mov esi, DWORD[{FindAsmName(to.Lex)}]");
+                                tmp.Add($"cmp DWORD[{FindAsmName(accumulator?.Lex)}], esi");
+                                tmp.Add($"jg _loop_end_{_loopCtr}");
 
                                 var origLoopCtr = _loopCtr;
                                 if (P_Do())
@@ -60,10 +62,11 @@ namespace Compiler.Parser
                                         {
                                             if (P_Rbrace())
                                             {
-                                                _text.Add($"mov edi, DWORD[{FindAsmName(step.Lex)}]");
-                                                _text.Add($"add DWORD[{FindAsmName(accumulator.Lex)}], edi");
-                                                _text.Add($"jmp _loop_start_{origLoopCtr}");
-                                                _text.Add($"_loop_end_{origLoopCtr}:");
+                                                tmp.Add($"mov edi, DWORD[{FindAsmName(step.Lex)}]");
+                                                tmp.Add($"add DWORD[{FindAsmName(accumulator?.Lex)}], edi");
+                                                tmp.Add($"jmp _loop_start_{origLoopCtr}");
+                                                tmp.Add($"_loop_end_{origLoopCtr}:");
+                                                AddToCorrectSection(isProc, tmp);
                                                 return true;
                                             }
                                         }

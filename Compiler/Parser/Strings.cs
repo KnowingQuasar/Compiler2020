@@ -4,12 +4,16 @@ namespace Compiler.Parser
 {
     public partial class Parser
     {
-        private Token.Token P_StrConst()
+        private bool P_StrConst(out Token.Token? token)
         {
-            if (_curr.Type != TokenType.StrConst) return null;
-            var str = _curr;
+            if (_curr.Type != TokenType.StrConst)
+            {
+                token = null;
+                return false;
+            }
+            token = _curr;
             _curr = _scanner.GetNextToken();
-            return str;
+            return true;
         }
     }
 }

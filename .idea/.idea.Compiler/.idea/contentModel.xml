@@ -32,6 +32,7 @@
           <e p="Numbers.cs" t="Include" />
           <e p="Parser.cs" t="Include" />
           <e p="PData.cs" t="Include" />
+          <e p="Procedures.cs" t="Include" />
           <e p="ReadWrite.cs" t="Include" />
           <e p="Strings.cs" t="Include" />
           <e p="Structure.cs" t="Include" />

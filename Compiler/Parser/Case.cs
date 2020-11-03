@@ -1,3 +1,4 @@
+using System.Collections;
 using Compiler.Token;
 
 namespace Compiler.Parser
@@ -31,26 +32,33 @@ namespace Compiler.Parser
             return CheckToken(TokenType.Default);
         }
 
-        private bool P_CasePart(Token.Token switchArg)
+        /// <summary>
+        /// CASE [EXP]:{[STATEMENT]} [CASE PART] | DEFAULT:{[STATEMENT]}
+        /// </summary>
+        /// <param name="switchArg"></param>
+        /// <returns></returns>
+        private bool P_CasePart(bool isProc, Token.Token? switchArg)
         {
+            var tmp = new ArrayList();
             if (P_Case())
             {
                 _tmpCtr++;
                 var condition = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
                 _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
-                PerformExpression(condition);
+                PerformExpression(isProc, condition);
                 _ifCtr++;
-                _text.Add($"mov edi, {DetermineAsmOperand(condition.Lex)}");
-                _text.Add($"cmp {DetermineAsmOperand(switchArg.Lex)}, edi");
-                _text.Add($"jnz _endif_{_ifCtr}");
+                tmp.Add($"mov edi, {DetermineAsmOperand(condition.Lex)}");
+                tmp.Add($"cmp {DetermineAsmOperand(switchArg.Lex)}, edi");
+                tmp.Add($"jnz _endif_{_ifCtr}");
                 var ifCtr = _ifCtr;
                 if (P_Colon() && P_LBrace())
                 {
                     if (P_Statement())
                     {
-                        _text.Add($"jmp _endswitch_{_switchCtr}");
-                        _text.Add($"_endif_{ifCtr}:");
-                        return P_Rbrace() && P_CasePart(switchArg);
+                        tmp.Add($"jmp _endswitch_{_switchCtr}");
+                        tmp.Add($"_endif_{ifCtr}:");
+                        AddToCorrectSection(isProc, tmp);
+                        return P_Rbrace() && P_CasePart(isProc, switchArg);
                     }
                 }
             }
@@ -58,9 +66,9 @@ namespace Compiler.Parser
             if (P_Default())
             {
                 _elseCtr++;
-                var thisElseCtr = _elseCtr;
-                _text.RemoveAt(_text.Count - 1);
-                _text.Add($"_endif_{_ifCtr}:");
+                tmp.RemoveAt(_text.Count - 1);
+                tmp.Add($"_endif_{_ifCtr}:");
+                AddToCorrectSection(isProc, tmp);
                 if (P_Colon() && P_LBrace())
                 {
                     if (P_Statement())
@@ -72,7 +80,11 @@ namespace Compiler.Parser
             return false;
         }
         
-        private bool P_CaseStmt()
+        /// <summary>
+        /// SWITCH ([VARIABLE NAME]) { [CASE PART] }
+        /// </summary>
+        /// <returns></returns>
+        private bool P_CaseStmt(bool isProc)
         {
             if (P_Switch())
             {
@@ -85,9 +97,10 @@ namespace Compiler.Parser
                         {
                             if (P_LBrace())
                             {
-                                if (P_CasePart(switchArg))
+                                if (P_CasePart(isProc, switchArg))
                                 {
-                                    _text.Add($"_endswitch_{_switchCtr}:");
+                                    var tmp = new ArrayList {$"_endswitch_{_switchCtr}:"};
+                                    AddToCorrectSection(isProc, tmp);
                                     if (P_Rbrace())
                                     {
                                         return true;

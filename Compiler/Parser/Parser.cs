@@ -16,6 +16,7 @@ namespace Compiler.Parser
         private HashSet<BssData> _bss;
         private HashSet<PData> _data;
         private ArrayList _text;
+        private ArrayList _procs;
         private int _bssCtr;
         private int _dataCtr;
         private int _expCtr;
@@ -27,7 +28,7 @@ namespace Compiler.Parser
         private int _switchCtr;
         private int _ifCtr;
         private int _elseCtr;
-        
+
         public Parser()
         {
             _curr = new Token.Token(TokenType.Error, "", -1, -1);
@@ -36,6 +37,7 @@ namespace Compiler.Parser
             _data = new HashSet<PData>();
             _arrs = new List<PArray>();
             _text = new ArrayList();
+            _procs = new ArrayList();
             _bssCtr = -1;
             _dataCtr = -1;
             _expCtr = -1;
@@ -59,8 +61,32 @@ namespace Compiler.Parser
             _curr = _scanner.GetNextToken();
 
             if (!P_Program()) return null;
-           // LogError("File compiled successfully!");
+            // LogError("File compiled successfully!");
             return _asmFileName;
+        }
+        
+        private string DetermineAsmOperand(string? operand)
+        {
+            if (operand == "edi") return "edi";
+            return int.TryParse(operand, out var val) ? val.ToString() : "DWORD[" + FindAsmName(operand) + "]";
+        }
+
+        private void AddToCorrectSection(bool isProc, IEnumerable data)
+        {
+            if (isProc)
+            {
+                foreach (var t in data)
+                {
+                    _procs.Add(t);
+                }
+            }
+            else
+            {
+                foreach (var t in data)
+                {
+                    _text.Add(t);
+                }
+            }
         }
 
         private void LogError(string message)
@@ -69,13 +95,20 @@ namespace Compiler.Parser
             _errFile?.WriteLine(message);
         }
 
-        private string GenerateTextSection()
+        private string GenerateSection(IEnumerable list)
         {
-            return _text.Cast<object?>().Aggregate("", (current, item) => current + (item + "\n"));
+            return list.Cast<object?>().Aggregate("", (current, item) => current + (item + "\n"));
         }
-        private string GenerateBssName(string lex)
+
+        private string GenerateBssName(string? lex)
         {
             return $"_{_bssCtr.ToString()}_{lex.ToLower()}";
+        }
+
+        private bool DoesVarExist(string? lex)
+        {
+            return _bss.Any(item => string.Equals(item.ActualName, lex, StringComparison.CurrentCultureIgnoreCase)) ||
+                   _data.Any(item => string.Equals(item.ActualName, lex, StringComparison.CurrentCultureIgnoreCase));
         }
 
         private string GenerateDataName(string lex)
@@ -85,7 +118,8 @@ namespace Compiler.Parser
 
         private string BuildData()
         {
-            var text = _data.Aggregate("section .data\n", (current, item) => current + $"{item.AsmName} {item.DataType} {item.Value}\n");
+            var text = _data.Aggregate("section .data\n",
+                (current, item) => current + $"{item.AsmName} {item.DataType} {item.Value}\n");
 
             text += "stringPrinter db \"%s\",0\n";
             text += "numberPrinter db \"%d\",0x0d,0x0a,0\n";
@@ -96,17 +130,21 @@ namespace Compiler.Parser
 
         private string BuildBss()
         {
-            return _bss.Aggregate("section .bss\n", (current, item) => current + $"{item.AsmName} {item.DataType} {item.Size}\n");
+            return _bss.Aggregate("section .bss\n",
+                (current, item) => current + $"{item.AsmName} {item.DataType} {item.Size}\n");
         }
 
-        private string? FindAsmName(string realName)
+        private string? FindAsmName(string? realName)
         {
-            foreach (var item in _bss.Where(item => string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)))
+            foreach (var item in _bss.Where(item =>
+                string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)))
             {
                 return item.AsmName;
             }
 
-            return (from item in _data where string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase) select item.AsmName).FirstOrDefault() ?? null;
+            return (from item in _data
+                where string.Equals(item.ActualName, realName, StringComparison.CurrentCultureIgnoreCase)
+                select item.AsmName).FirstOrDefault() ?? null;
         }
 
         private void LogError(TokenType actualToken, TokenType expectedToken)
@@ -126,7 +164,7 @@ namespace Compiler.Parser
         /// </summary>
         /// <returns></returns>
         private bool P_Program()
-        {  
+        {
             if (_curr.Type == TokenType.Program)
             {
                 _curr = _scanner.GetNextToken();
@@ -142,28 +180,31 @@ namespace Compiler.Parser
                     _asmFile.WriteLine("extern _scanf");
                     _asmFile.WriteLine("extern _ExitProcess@4");
 
-                    _text.Add("section .text");
-                    _text.Add("Start:");
-                    
                     _curr = _scanner.GetNextToken();
-                    
+
                     if (P_Semicolon() && P_Begin() && P_Statement() && P_End() && P_Dot())
                     {
                         _text.Add("exit:");
                         _text.Add("mov eax, 0x0");
                         _text.Add("call _ExitProcess@4");
-                        
+
                         _asmFile.Write(BuildData());
                         _asmFile.Write(BuildBss());
-                        _asmFile.Write(GenerateTextSection());
-                        
+
+                        _asmFile.WriteLine("section .text");
+                        _asmFile.WriteLine("Start:");
+                        _asmFile.WriteLine("jmp afterProcedures");
+                        _asmFile.Write(GenerateSection(_procs));
+                        _asmFile.WriteLine("afterProcedures:");
+                        _asmFile.Write(GenerateSection(_text));
+
                         _asmFile.Close();
                         _asmFile.Dispose();
                         _errFile.Close();
                         _errFile.Dispose();
                         return true;
                     }
-                    
+
                     _asmFile.Close();
                     _asmFile.Dispose();
                     _errFile.Close();
