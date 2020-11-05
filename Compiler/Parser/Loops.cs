@@ -38,14 +38,14 @@ namespace Compiler.Parser
                         {
                             _tmpCtr++;
                             var to = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
                             PerformExpression(isProc, to);
                             if (P_Step())
                             {
                                 var tmp = new ArrayList();
                                 _tmpCtr++;
                                 var step = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
                                 PerformExpression(isProc, step);
                                 _loopCtr++;
                                 tmp.Add($"_loop_start_{_loopCtr}:");

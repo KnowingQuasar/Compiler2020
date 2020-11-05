@@ -28,6 +28,7 @@
           <e p="BssData.cs" t="Include" />
           <e p="Case.cs" t="Include" />
           <e p="Conditionals.cs" t="Include" />
+          <e p="Floats.cs" t="Include" />
           <e p="Loops.cs" t="Include" />
           <e p="Numbers.cs" t="Include" />
           <e p="Parser.cs" t="Include" />

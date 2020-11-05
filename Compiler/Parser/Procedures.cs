@@ -67,7 +67,7 @@ namespace Compiler.Parser
                 if (!DoesVarExist(param?.Lex))
                 {
                     _bssCtr++;
-                    _bss.Add(new BssData(GenerateBssName(param?.Lex), param?.Lex, "resd", "1"));
+                    _bss.Add(new BssData(GenerateBssName(param?.Lex), param?.Lex, "resd", "1", AsmDataType.Num));
                 }
 
                 _procs.Add($"mov eax, DWORD[esp+{(passByVals.Count + passByRefs.Count) * 4 + 4}]");
@@ -93,7 +93,7 @@ namespace Compiler.Parser
                     if (!DoesVarExist(param?.Lex))
                     {
                         _bssCtr++;
-                        _bss.Add(new BssData(GenerateBssName(param?.Lex), param?.Lex, "resd", "1"));
+                        _bss.Add(new BssData(GenerateBssName(param?.Lex), param?.Lex, "resd", "1", AsmDataType.Num));
                     }
 
                     _procs.Add($"mov eax, DWORD[esp+{(passByVals.Count + passByRefs.Count) * 4 + 4}]");

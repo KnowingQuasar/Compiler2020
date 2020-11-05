@@ -86,12 +86,12 @@ namespace Compiler.Parser
             op = null;
             _tmpCtr++;
             lhand = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
             PerformExpression(isProc, lhand);
             if (!P_RelationalOperator(out op)) return false;
             _tmpCtr++;
             rhand = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
             PerformExpression(isProc, rhand);
             return true;
         }

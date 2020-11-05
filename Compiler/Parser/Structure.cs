@@ -118,9 +118,11 @@ namespace Compiler.Parser
         private bool P_Statement(bool isProc = false)
         {
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            return ((P_WriteStmt(isProc) || P_ReadStmt(isProc) || P_ProcDeclStmt() || P_AssignStmt(isProc) || P_IfStmt(isProc) ||
+            return ((P_WriteStmt(isProc) || P_ReadStmt(isProc) || P_ProcDeclStmt() || P_AssignStmt(isProc) ||
+                     P_IfStmt(isProc) ||
                      P_CaseStmt(isProc) || P_NumDeclStmt(isProc) || P_ArrayStmt(isProc) ||
-                     P_ForStatement(isProc)) && P_Statement(isProc)) || true;
+                     P_ForStatement(isProc) || P_StrDeclStmt(isProc) || P_FloatDeclStmt(isProc)) &&
+                    P_Statement(isProc)) || true;
         }
 
         /// <summary>
@@ -132,7 +134,20 @@ namespace Compiler.Parser
         {
             if (P_VarName(out var assignee))
             {
-                return P_NumAssignStmt(isProc, assignee) || P_ArrayAssignStmt(isProc, assignee) || P_ProcCallStmt(assignee);
+                if (!DoesVarExist(assignee?.Lex)) return false;
+
+                if (GetTypeOfVar(assignee?.Lex) == AsmDataType.String)
+                {
+                    return P_StrAssignStmt(isProc, assignee);
+                }
+
+                if (GetTypeOfVar(assignee?.Lex) == AsmDataType.Float)
+                {
+                    return P_FloatAssignStmt(isProc, assignee);
+                }
+
+                return P_NumAssignStmt(isProc, assignee) || P_ArrayAssignStmt(isProc, assignee) ||
+                       P_ProcCallStmt(assignee);
             }
 
             return false;

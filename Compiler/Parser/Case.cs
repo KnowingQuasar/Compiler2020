@@ -44,7 +44,7 @@ namespace Compiler.Parser
             {
                 _tmpCtr++;
                 var condition = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
                 PerformExpression(isProc, condition);
                 _ifCtr++;
                 tmp.Add($"mov edi, {DetermineAsmOperand(condition.Lex)}");

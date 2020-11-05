@@ -15,11 +15,9 @@ namespace Compiler.Parser
             var tmp = new ArrayList();
             if (alpha != null && alpha.Type == TokenType.StrConst)
             {
-                _dataCtr++;
-                _data.Add(new PData($"s{_dataCtr}", $"s{_dataCtr}", "db", $"{alpha.Lex},0x0d,0x0a,0"));
                 tmp.Add($"push s{_dataCtr}");
                 tmp.Add("push stringPrinter");
-            } 
+            }
             else
             {
                 if (P_LeftBracket())
@@ -29,7 +27,7 @@ namespace Compiler.Parser
                     {
                         _tmpCtr++;
                         var idx = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                        _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                        _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
 
                         if (PerformExpression(isProc, idx))
                         {
@@ -56,8 +54,23 @@ namespace Compiler.Parser
                         return P_Semicolon();
                     }
                 }
-                tmp.Add($"push DWORD[{FindAsmName(alpha.Lex)}]");
-                tmp.Add("push numberPrinter");
+
+                if (GetTypeOfVar(alpha?.Lex) == AsmDataType.String)
+                {
+                    tmp.Add($"push {FindAsmName(alpha?.Lex)}");
+                    tmp.Add("push stringPrinter");
+                }
+                else if (GetTypeOfVar(alpha?.Lex) == AsmDataType.Float)
+                {
+                    tmp.Add($"fld DWORD[{FindAsmName(alpha?.Lex)}]");
+                    tmp.Add("fstp QWORD[esp]");
+                    tmp.Add("push floatPrinter");
+                }
+                else
+                {
+                    tmp.Add($"push DWORD[{FindAsmName(alpha.Lex)}]");
+                    tmp.Add("push numberPrinter");
+                }
             }
             tmp.Add("call _printf");
             tmp.Add("add esp, 0x08");
@@ -93,7 +106,7 @@ namespace Compiler.Parser
             {
                 _tmpCtr++;
                 var writeData = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
                 return PerformExpression(isProc, writeData);
             }
             return true;

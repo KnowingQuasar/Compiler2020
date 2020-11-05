@@ -3,12 +3,23 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Compiler.Token;
 
 namespace Compiler.Parser
 {
     public partial class Parser
     {
+        public enum AsmDataType
+        {
+            String,
+            Num,
+            Float,
+            FloatLiteral,
+            Array,
+            Invalid
+        }
+        
         private Token.Token _curr;
         private readonly Scanner.Scanner _scanner;
         private StreamWriter? _asmFile;
@@ -28,6 +39,8 @@ namespace Compiler.Parser
         private int _switchCtr;
         private int _ifCtr;
         private int _elseCtr;
+        private int _strCtr;
+        private int _copyCtr;
 
         public Parser()
         {
@@ -47,6 +60,8 @@ namespace Compiler.Parser
             _ifCtr = -1;
             _elseCtr = -1;
             _switchCtr = -1;
+            _strCtr = -1;
+            _copyCtr = -1;
             _asmFileName = null;
         }
 
@@ -64,7 +79,7 @@ namespace Compiler.Parser
             // LogError("File compiled successfully!");
             return _asmFileName;
         }
-        
+
         private string DetermineAsmOperand(string? operand)
         {
             if (operand == "edi") return "edi";
@@ -105,6 +120,21 @@ namespace Compiler.Parser
             return $"_{_bssCtr.ToString()}_{lex.ToLower()}";
         }
 
+        private AsmDataType GetTypeOfVar(string? lex)
+        {
+            var rg = new Regex(@"\d+\.\d+");
+            if (rg.IsMatch(lex)) return AsmDataType.FloatLiteral;
+            var bssSym = _bss.FirstOrDefault(item =>
+                string.Equals(item.ActualName, lex, StringComparison.CurrentCultureIgnoreCase));
+            if (bssSym == null)
+            {
+                var dataSym = _data.FirstOrDefault(item => string.Equals(item.ActualName, lex, StringComparison.CurrentCultureIgnoreCase));
+                if (dataSym != null) return dataSym.AsmDataType;
+            }
+
+            return bssSym?.AsmDataType ?? AsmDataType.Invalid;
+        }
+
         private bool DoesVarExist(string? lex)
         {
             return _bss.Any(item => string.Equals(item.ActualName, lex, StringComparison.CurrentCultureIgnoreCase)) ||
@@ -124,12 +154,14 @@ namespace Compiler.Parser
             text += "stringPrinter db \"%s\",0\n";
             text += "numberPrinter db \"%d\",0x0d,0x0a,0\n";
             text += "int_format db \"%i\",0\n";
+            text += "floatPrinter db \"%f\",0x0d,0x0a,0\n";
 
             return text;
         }
 
         private string BuildBss()
         {
+           // if (_bss.Count == 0) return "";
             return _bss.Aggregate("section .bss\n",
                 (current, item) => current + $"{item.AsmName} {item.DataType} {item.Size}\n");
         }
@@ -174,18 +206,18 @@ namespace Compiler.Parser
                     _asmFileName = $"{_curr.Lex.ToLower()}.asm";
                     _asmFile = new StreamWriter("C:\\Compiler\\" + _asmFileName);
                     _errFile = new StreamWriter("C:\\Compiler\\" + $"{_curr.Lex.ToLower()}.err");
-
-                    _asmFile.WriteLine("global Start");
+                    
                     _asmFile.WriteLine("extern _printf");
                     _asmFile.WriteLine("extern _scanf");
                     _asmFile.WriteLine("extern _ExitProcess@4");
+                    _asmFile.WriteLine("global Start");
 
                     _curr = _scanner.GetNextToken();
 
                     if (P_Semicolon() && P_Begin() && P_Statement() && P_End() && P_Dot())
                     {
                         _text.Add("exit:");
-                        _text.Add("mov eax, 0x0");
+                        _text.Add("push 0");
                         _text.Add("call _ExitProcess@4");
 
                         _asmFile.Write(BuildData());
@@ -193,9 +225,13 @@ namespace Compiler.Parser
 
                         _asmFile.WriteLine("section .text");
                         _asmFile.WriteLine("Start:");
-                        _asmFile.WriteLine("jmp afterProcedures");
-                        _asmFile.Write(GenerateSection(_procs));
-                        _asmFile.WriteLine("afterProcedures:");
+                        if (_procs.Count > 0)
+                        {
+                            _asmFile.WriteLine("jmp afterProcedures");
+                            _asmFile.Write(GenerateSection(_procs));
+                            _asmFile.WriteLine("afterProcedures:");
+                        }
+
                         _asmFile.Write(GenerateSection(_text));
 
                         _asmFile.Close();

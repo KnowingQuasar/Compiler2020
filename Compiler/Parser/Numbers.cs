@@ -34,6 +34,7 @@ namespace Compiler.Parser
                 AddToCorrectSection(isProc, tmp);
                 return true;
             }
+
             var reg = ExecutePostfix(isProc, exp);
             tmp.Add($"mov esi, DWORD[{FindAsmName(reg)}]");
             tmp.Add($"mov DWORD[{FindAsmName(assignee?.Lex)}], esi");
@@ -49,7 +50,7 @@ namespace Compiler.Parser
         {
             return CheckToken(TokenType.Num);
         }
-        
+
         private bool P_IntConst(out Token.Token? num)
         {
             if (_curr.Type != TokenType.IntConst)
@@ -69,8 +70,20 @@ namespace Compiler.Parser
                 return false;
             }
 
+            var part = _curr;
             num = _curr;
             _curr = _scanner.GetNextToken();
+
+            if (P_Dot())
+            {
+                if (_curr.Type == TokenType.IntConst)
+                {
+                    num = new Token.Token(TokenType.FloatConst, $"{part?.Lex}.{_curr.Lex}", _curr.Line, _curr.Col);
+                    _curr = _scanner.GetNextToken();
+                    return true;
+                }
+            }
+
             return true;
         }
 
@@ -86,13 +99,14 @@ namespace Compiler.Parser
 
         private bool P_NumDeclStmt(bool isProc)
         {
-            if (_curr.Type != TokenType.Num) return false;
-            _curr = _scanner.GetNextToken();
-            if (P_VarName(out var varName))
+            if (P_Num())
             {
-                _bssCtr++;
-                _bss.Add(new BssData(GenerateBssName(varName?.Lex), varName?.Lex, "resd", "1"));
-                return P_Delta(isProc, varName);
+                if (P_VarName(out var varName))
+                {
+                    _bssCtr++;
+                    _bss.Add(new BssData(GenerateBssName(varName?.Lex), varName?.Lex, "resd", "1", AsmDataType.Num));
+                    return P_Delta(isProc, varName);
+                }
             }
 
             return false;
@@ -103,7 +117,8 @@ namespace Compiler.Parser
             if (P_Semicolon())
             {
                 _bssCtr++;
-                _bss.Add(new BssData(GenerateBssName(declaredVar?.Lex), declaredVar?.Lex, "resd", "1"));
+                _bss.Add(new BssData(GenerateBssName(declaredVar?.Lex), declaredVar?.Lex, "resd", "1",
+                    AsmDataType.Num));
                 return true;
             }
 
@@ -129,6 +144,13 @@ namespace Compiler.Parser
                     return P_Semicolon();
                 }
 
+                if (float.TryParse(val, out var fresult))
+                {
+                    tmp.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], __float32__({fresult.ToString()})");
+                    AddToCorrectSection(isProc, tmp);
+                    return P_Semicolon();
+                }
+
                 tmp.Add($"mov esi, DWORD[{FindAsmName(val)}]");
                 tmp.Add($"mov DWORD[{FindAsmName(declaredVar.Lex)}], esi");
                 AddToCorrectSection(isProc, tmp);
@@ -146,33 +168,182 @@ namespace Compiler.Parser
 
             return false;
         }
-        
+
         private string? ExecuteOperator(bool isProc, string op1, string op2, string oper)
         {
             if (!IsOperator(oper)) return null;
 
             _tmpCtr++;
-            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
-            
+            _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
+
             var tmp = new ArrayList();
+            if (!DoesVarExist("flt_left_stack"))
+            {
+                _bss.Add(new BssData("flt_left_stack", "flt_left_stack", "resb", "4", AsmDataType.Float));
+            }
+
+            if (!DoesVarExist("flt_right_stack"))
+            {
+                _bss.Add(new BssData("flt_right_stack", "flt_right_stack", "resb", "4", AsmDataType.Float));
+            }
+
+            if (!DoesVarExist("flt_result"))
+            {
+                _bss.Add(new BssData("flt_result", "flt_result", "resb", "4", AsmDataType.Float));
+            }
+            
+            var lhandType = GetTypeOfVar(op2);
+            var rhandType = GetTypeOfVar(op1);
+
             switch (oper)
             {
                 case "+":
-                    tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
-                    tmp.Add($"add esi, {DetermineAsmOperand(op1)}");
-                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    if (lhandType == AsmDataType.Float || rhandType == AsmDataType.Float ||
+                        lhandType == AsmDataType.FloatLiteral || rhandType == AsmDataType.FloatLiteral)
+                    {
+                        if (lhandType == AsmDataType.Float)
+                        {
+                            tmp.Add($"fld DWORD[{FindAsmName(op2)}]");
+                        }
+                        else if (lhandType == AsmDataType.FloatLiteral)
+                        {
+                            tmp.Add($"mov DWORD[flt_left_stack], __float32__({op2})");
+                            tmp.Add("fld DWORD[flt_left_stack]");
+                        }
+                        else
+                        {
+                            tmp.Add($"mov DWORD[flt_left_stack], {op2}");
+                            tmp.Add("fild DWORD[flt_left_stack]");
+                        }
+
+                        if (rhandType == AsmDataType.Float)
+                        {
+                            tmp.Add($"fld DWORD[{FindAsmName(op1)}]");
+                        }
+                        else if (rhandType == AsmDataType.FloatLiteral)
+                        {
+                            tmp.Add($"mov DWORD[flt_right_stack], __float32__({op1})");
+                            tmp.Add("fld DWORD[flt_right_stack]");
+                        }
+                        else
+                        {
+                            tmp.Add($"mov DWORD[flt_right_stack], {op1}");
+                            tmp.Add("fild DWORD[flt_right_stack]");
+                        }
+
+                        tmp.Add("fadd");
+                        tmp.Add("fstp QWORD[flt_result]");
+                        tmp.Add("fld QWORD[flt_result]");
+                        tmp.Add($"fstp DWORD[_{_tmpCtr}_tmp]");
+                    }
+                    else
+                    {
+                        tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                        tmp.Add($"add esi, {DetermineAsmOperand(op1)}");
+                        tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    }
+
                     break;
                 case "-":
-                    tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
-                    tmp.Add($"sub esi, {DetermineAsmOperand(op1)}");
-                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    if (lhandType == AsmDataType.Float || rhandType == AsmDataType.Float ||
+                        lhandType == AsmDataType.FloatLiteral || rhandType == AsmDataType.FloatLiteral)
+                    {
+                        if (lhandType == AsmDataType.Float)
+                        {
+                            tmp.Add($"fld DWORD[{FindAsmName(op2)}]");
+                        }
+                        else if (lhandType == AsmDataType.FloatLiteral)
+                        {
+                            tmp.Add($"mov DWORD[flt_left_stack], __float32__({op2})");
+                            tmp.Add("fld DWORD[flt_left_stack]");
+                        }
+                        else
+                        {
+                            tmp.Add($"mov DWORD[flt_left_stack], {op2}");
+                            tmp.Add("fild DWORD[flt_left_stack]");
+                        }
+
+                        if (rhandType == AsmDataType.Float)
+                        {
+                            tmp.Add($"fld DWORD[{FindAsmName(op1)}]");
+                        }
+                        else if (rhandType == AsmDataType.FloatLiteral)
+                        {
+                            tmp.Add($"mov DWORD[flt_right_stack], __float32__({op1})");
+                            tmp.Add("fld DWORD[flt_right_stack]");
+                        }
+                        else
+                        {
+                            tmp.Add($"mov DWORD[flt_right_stack], {op1}");
+                            tmp.Add("fild DWORD[flt_right_stack]");
+                        }
+
+                        tmp.Add("fsub");
+                        tmp.Add("fstp QWORD[flt_result]");
+                        tmp.Add("fld QWORD[flt_result]");
+                        tmp.Add($"fstp DWORD[_{_tmpCtr}_tmp]");
+                    }
+                    else
+                    {
+                        tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                        tmp.Add($"sub esi, {DetermineAsmOperand(op1)}");
+                        tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    }
+
                     break;
                 case "*":
-                    tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
-                    tmp.Add($"imul esi, {DetermineAsmOperand(op1)}");
-                    tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    if (lhandType == AsmDataType.Float || rhandType == AsmDataType.Float ||
+                        lhandType == AsmDataType.FloatLiteral || rhandType == AsmDataType.FloatLiteral)
+                    {
+                        if (lhandType == AsmDataType.Float)
+                        {
+                            tmp.Add($"fld DWORD[{FindAsmName(op2)}]");
+                        }
+                        else if (lhandType == AsmDataType.FloatLiteral)
+                        {
+                            tmp.Add($"mov DWORD[flt_left_stack], __float32__({op2})");
+                            tmp.Add("fld DWORD[flt_left_stack]");
+                        }
+                        else
+                        {
+                            tmp.Add($"mov DWORD[flt_left_stack], {op2}");
+                            tmp.Add("fild DWORD[flt_left_stack]");
+                        }
+
+                        if (rhandType == AsmDataType.Float)
+                        {
+                            tmp.Add($"fld DWORD[{FindAsmName(op1)}]");
+                        }
+                        else if (rhandType == AsmDataType.FloatLiteral)
+                        {
+                            tmp.Add($"mov DWORD[flt_right_stack], __float32__({op1})");
+                            tmp.Add("fld DWORD[flt_right_stack]");
+                        }
+                        else
+                        {
+                            tmp.Add($"mov DWORD[flt_right_stack], {op1}");
+                            tmp.Add("fild DWORD[flt_right_stack]");
+                        }
+
+                        tmp.Add("fmul");
+                        tmp.Add("fstp QWORD[flt_result]");
+                        tmp.Add("fld QWORD[flt_result]");
+                        tmp.Add($"fstp DWORD[_{_tmpCtr}_tmp]");
+                    }
+                    else
+                    {
+                        tmp.Add($"mov esi, {DetermineAsmOperand(op2)}");
+                        tmp.Add($"imul esi, {DetermineAsmOperand(op1)}");
+                        tmp.Add($"mov DWORD[_{_tmpCtr}_tmp], esi");
+                    }
+
                     break;
                 case "^":
+                    if (GetTypeOfVar(op1) == AsmDataType.Float || GetTypeOfVar(op2) == AsmDataType.Float)
+                    {
+                        return null;
+                    }
+
                     _expCtr++;
                     tmp.Add("xor esi, esi");
                     tmp.Add("mov eax, 0x00000001");
@@ -188,12 +359,12 @@ namespace Compiler.Parser
                 default:
                     return null;
             }
-            
+
             AddToCorrectSection(isProc, tmp);
 
             return $"_{_tmpCtr}_tmp";
         }
-        
+
         private string ExecutePostfix(bool isProc, Queue<string> exp)
         {
             var stack = new Stack<string>();
@@ -233,7 +404,6 @@ namespace Compiler.Parser
             if (!P_Op(isProc, out var op)) return P_Paren(isProc, postfixStack, exp);
             exp.Enqueue(op.Lex);
             return true;
-
         }
 
         private bool P_Paren(bool isProc, Stack<string> postfixStack, Queue<string> exp)
@@ -250,6 +420,7 @@ namespace Compiler.Parser
                 if (value == "(") break;
                 exp.Enqueue(value);
             }
+
             return true;
         }
 
@@ -257,7 +428,7 @@ namespace Compiler.Parser
         {
             return op == "^" || op == "*" || op == "/" || op == "+" || op == "-";
         }
-        
+
         private static int DeterminePrecedence(string op)
         {
             switch (op)
@@ -305,26 +476,32 @@ namespace Compiler.Parser
         {
             if (P_Multiply())
             {
-                return HandleOperator(postfixStack, exp, "*") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "*") && P_Li(isProc, postfixStack, exp) &&
+                       P_Ae(isProc, postfixStack, exp);
             }
 
             if (P_Divide())
             {
-                return HandleOperator(postfixStack, exp, "/") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "/") && P_Li(isProc, postfixStack, exp) &&
+                       P_Ae(isProc, postfixStack, exp);
             }
 
             if (P_Pow())
             {
-                return HandleOperator(postfixStack, exp, "^") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "^") && P_Li(isProc, postfixStack, exp) &&
+                       P_Ae(isProc, postfixStack, exp);
             }
+
             if (P_Plus())
             {
-                return HandleOperator(postfixStack, exp, "+") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "+") && P_Li(isProc, postfixStack, exp) &&
+                       P_Ae(isProc, postfixStack, exp);
             }
 
             if (P_Minus())
             {
-                return HandleOperator(postfixStack, exp, "-") && P_Li(isProc, postfixStack, exp) && P_Ae(isProc, postfixStack, exp);
+                return HandleOperator(postfixStack, exp, "-") && P_Li(isProc, postfixStack, exp) &&
+                       P_Ae(isProc, postfixStack, exp);
             }
 
             return true;
@@ -332,7 +509,7 @@ namespace Compiler.Parser
 
         private bool P_Op(bool isProc, out Token.Token? operand)
         {
-            if(P_PosOrNeg(out operand)) return true;
+            if (P_PosOrNeg(out operand)) return true;
             if (P_VarName(out operand))
             {
                 if (P_Ref(isProc, operand, out var result))
@@ -364,7 +541,7 @@ namespace Compiler.Parser
                 {
                     _tmpCtr++;
                     var idx = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
 
                     if (PerformExpression(isProc, idx))
                     {
@@ -388,10 +565,10 @@ namespace Compiler.Parser
 
                     var tmp = new ArrayList();
                     tmp.AddRange(arr.GetRef(indices));
-                    
+
                     _tmpCtr++;
                     result = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
                     tmp.Add($"add eax, {FindAsmName(operand?.Lex)}");
                     tmp.Add($"mov eax, DWORD[eax]");
                     tmp.Add($"mov {DetermineAsmOperand(result.Lex)}, eax");

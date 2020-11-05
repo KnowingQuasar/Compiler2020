@@ -150,7 +150,7 @@ namespace Compiler.Parser
                                             P_ArrayList(arr);
                                             _arrCtr++;
                                             _bss.Add(new BssData($"arr_{_arrCtr}_{arrName?.Lex}", arrName?.Lex, "resb",
-                                                arr.ComputeAllocSpace().ToString()));
+                                                arr.ComputeAllocSpace().ToString(), AsmDataType.Array));
                                             return P_Semicolon();
                                         }
                                     }
@@ -172,7 +172,7 @@ namespace Compiler.Parser
             {
                 _tmpCtr++;
                 var idx = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
 
                 if (PerformExpression(isProc, idx))
                 {
@@ -191,7 +191,7 @@ namespace Compiler.Parser
             {
                 _tmpCtr++;
                 var idx = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
 
                 if (PerformExpression(isProc, idx))
                 {
@@ -206,7 +206,7 @@ namespace Compiler.Parser
                 {
                     _tmpCtr++;
                     var val = new Token.Token(TokenType.VarName, $"_{_tmpCtr}_tmp", -1, -1);
-                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1"));
+                    _bss.Add(new BssData($"_{_tmpCtr}_tmp", $"_{_tmpCtr}_tmp", "resd", "1", AsmDataType.Num));
 
                     if (PerformExpression(isProc, val))
                     {

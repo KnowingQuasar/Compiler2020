@@ -206,6 +206,7 @@ namespace Compiler.Scanner
             return word switch
             {
                 "PROGRAM" => new Token.Token(TokenType.Program, word, Line, Col),
+                "STRING" => new Token.Token(TokenType.String, word, Line, Col),
                 "Return" => new Token.Token(TokenType.Return, word, Line, Col),
                 "WRITE" => new Token.Token(TokenType.Write, word, Line, Col),
                 "READ" => new Token.Token(TokenType.Read, word, Line, Col),
@@ -224,6 +225,7 @@ namespace Compiler.Scanner
                 "CASE" => new Token.Token(TokenType.Case, word, Line, Col),
                 "DEFAULT" => new Token.Token(TokenType.Default, word, Line, Col),
                 "ARRAY" => new Token.Token(TokenType.Array, word, Line, Col),
+                "FLOAT" => new Token.Token(TokenType.Float, word, Line, Col),
                 _ => new Token.Token(TokenType.VarName, word, Line, Col)
             };
         }
